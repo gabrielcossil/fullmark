@@ -140,7 +140,8 @@ def tick():
         old_lease = job.lease_until
         claimed = db.execute(
             update(Job)
-            .where(Job.id == job.id, Job.status == old_status, Job.lease_until == old_lease)
+            .where(Job.id == job.id, Job.status == old_status,
+                *([Job.lease_until == old_lease] if db.bind.dialect.name == "sqlite" else []))
             .values(status="running", lease_until=now() + 300)
         )
         if not claimed.rowcount:
