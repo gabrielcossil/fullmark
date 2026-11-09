@@ -1,6 +1,6 @@
 import json, logging, time
 from sqlalchemy import select, update, or_, and_, text
-from .db import Session, Job, Search, Article, Record, Review, audit, now
+from .db import Session, Job, Search, Article, Record, Review, audit, now, enqueue
 from . import pubmed, browser, files
 
 log = logging.getLogger("fullmark.worker")
@@ -13,10 +13,21 @@ class Later(Exception):
 
 def ingest(db, job):
     search = db.get(Search, job.payload["search_id"])
-    records, raw = pubmed.search(search.query, search.max_records)
+    def progress(value):
+        with Session() as monitor:
+            current = monitor.get(Job, job.id)
+            current.payload = {**current.payload, "progress": {**value, "updated_at": now()}}
+            monitor.commit()
+    # Preserve the exact query and frozen filter snapshot before receiving provider results.
+    context = dict(search.raw or {})
+    records, raw = pubmed.search(search.query, search.max_records, progress=progress, sort=context.get("filters", {}).get("sort", "pub date"))
+    raw["fullmark"] = context
+    raw["executed_at"] = now()
     search.raw = raw
     search.total_found = int(raw["esearchresult"]["count"])
     search.translated_query = raw["esearchresult"].get("querytranslation", "")
+    new_count = 0
+    duplicate_count = 0
     for metadata in records:
         key = pubmed.identity(metadata)
         # PMID fallback also merges an identifier-enriched record already imported.
@@ -30,9 +41,15 @@ def ingest(db, job):
             article = Article(review_id=job.review_id, identity=key, metadata_json=metadata)
             db.add(article)
             db.flush()
+            new_count += 1
+        else:
+            duplicate_count += 1
         exists = db.scalar(select(Record.id).where(Record.search_id == search.id, Record.source_id == metadata["pmid"]))
         if not exists:
             db.add(Record(review_id=job.review_id, search_id=search.id, article_id=article.id, source_id=metadata["pmid"], raw=metadata))
+    search.raw = {**raw, "stats": {"imported":len(records), "new":new_count, "duplicates":duplicate_count}}
+    if context.get("automatic_screening") and records:
+        enqueue(db, job.review_id, "browser", "auto-"+search.id, {})
     audit(
         db,
         job.review_id,
@@ -111,7 +128,32 @@ def handle(db, job):
         if db.bind.dialect.name == "postgresql" and not db.scalar(text("select pg_try_advisory_xact_lock(73941025)")):
             raise Later(10)
         ingest(db, job)
+    elif job.kind == "planning":
+        if not job.external_id:
+            if job.payload.get("submission_started"):
+                job.status = "needs_reconciliation"
+                return
+            r = db.get(Review, job.review_id)
+            job.payload = {**job.payload, "submission_started": True}
+            db.commit()
+            job.external_id = browser.submit({"title":r.title, **r.protocol}, [], planning=True)
+            db.commit()
+            raise Later(15)
+        result = browser.poll(job.external_id, planning=True)
+        if result is None:
+            if now()-job.created_at > 3600: raise ValueError("Planning timeout")
+            raise Later(15)
+        output, raw = result
+        checked = []
+        for concept in output.concepts:
+            for term in concept.mesh:
+                time.sleep(.35)
+                checked.append(pubmed.verify_mesh(term))
+        job.payload = {**job.payload, "result":output.model_dump(mode="json"), "mesh_verification":checked}
+        audit(db, job.review_id, "browser-use", "planning_proposed", {"run_id":job.external_id,"proposal":output.model_dump(mode="json"),"mesh_verification":checked,"prompt_version":"planning-1.0"})
     elif job.kind == "browser":
+        if db.scalar(select(Job.id).where(Job.review_id == job.review_id, Job.kind == "pubmed", Job.status != "done")):
+            raise Later(15)
         browse(db, job)
     elif job.kind == "pdf":
         a = db.get(Article, job.payload["article_id"])
@@ -169,7 +211,7 @@ def tick():
             job.attempts += 1
             # Never store request URLs, headers, response bodies or credentials in errors.
             job.error = type(exc).__name__
-            ambiguous = job.kind == "browser" and job.payload.get("submission_started") and not job.external_id
+            ambiguous = job.kind in ("browser", "planning") and job.payload.get("submission_started") and not job.external_id
             if ambiguous:
                 job.status = "needs_reconciliation"
             elif job.attempts >= 3:

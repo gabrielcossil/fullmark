@@ -122,7 +122,11 @@ def prisma(db, rid):
 
 def snapshot(db, r):
     def rows(cls):
-        return [{c.name: getattr(o, c.name) for c in cls.__table__.columns} for o in db.scalars(select(cls).where(cls.review_id == r.id))]
+        result = [{c.name: getattr(o, c.name) for c in cls.__table__.columns} for o in db.scalars(select(cls).where(cls.review_id == r.id))]
+        if cls is Job:
+            for row in result:
+                row["payload"] = {k:v for k,v in row["payload"].items() if k != "snapshot"}
+        return result
 
     return {
         "review": {c.name: getattr(r, c.name) for c in Review.__table__.columns},

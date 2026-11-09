@@ -52,7 +52,7 @@ def test_search_idempotency(client, auth, review):
 def test_pubmed_dedup_preserves_sources(client, auth, review, monkeypatch):
     records = [{"pmid": "2", "doi": "10.1/example", "title": "Example", "abstract": "Randomized trial"}]
     monkeypatch.setattr(
-        pubmed, "search", lambda q, n: (records, {"esearchresult": {"count": "20", "querytranslation": "exercise[All Fields]"}})
+        pubmed, "search", lambda q, n, **kw: (records, {"esearchresult": {"count": "20", "querytranslation": "exercise[All Fields]"}})
     )
     for key in ["search-01", "search-02"]:
         client.post(f"/reviews/{review}/searches", headers={**auth, "Idempotency-Key": key}, json={"query": "exercise"})
@@ -243,7 +243,7 @@ def test_pdf_no_pmid_does_not_download(review, article):
 
 
 def test_failed_job_bounded_retry(review, monkeypatch):
-    monkeypatch.setattr(pubmed, "search", lambda *a: (_ for _ in ()).throw(RuntimeError("do not log secret")))
+    monkeypatch.setattr(pubmed, "search", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("do not log secret")))
     with db.Session() as s:
         search = db.Search(review_id=review, request_key="failure-search", query="example", max_records=1)
         s.add(search)

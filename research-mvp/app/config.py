@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     storage_proxy_token: str = ""
     internal_token: str = ""
     allowed_emails: str = ""
+    automation_owner_id: str = ""
     browser_use_api_key: str = ""
     browser_network_policy_id: str = ""
     browser_model: str = "gpt-6-luna"
