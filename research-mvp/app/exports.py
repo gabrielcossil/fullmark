@@ -11,10 +11,16 @@ def xlsx(snap):
     stamp = lambda ts: datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
     for d in sorted(snap["decisions"], key=lambda x: (x["created_at"], x["id"])):
         decisions[(d["article_id"], d["stage"])] = d
+    protocol = snap["review"]["protocol"]
     summary = [
         ["FULLMARK • MATRIZ DE EVIDÊNCIAS"],
         ["Pesquisa", snap["review"]["title"]],
         ["Protocolo SHA256", snap["review"]["protocol_hash"]],
+        ["Pergunta", protocol.get("question", "")],
+        ["Critérios de inclusão", "\n".join(protocol.get("inclusion", []))],
+        ["Critérios de exclusão", "\n".join(protocol.get("exclusion", []))],
+        ["Observações", protocol.get("observations", "")],
+        ["Filtros aprovados", json.dumps(protocol.get("filters", {}), ensure_ascii=False)],
         ["Exportado UTC", stamp(snap["exported_at"])],
         ["PRISMA completo", "Sim" if p["complete"] else "Não · há pendências"],
         ["Métrica", "Quantidade"],
@@ -65,7 +71,14 @@ def xlsx(snap):
                     for s in snap["searches"]
                     if s["id"] in {x["search_id"] for x in snap["records"] if x["article_id"] == a["id"]}
                 ),
-                json.dumps(snap["review"]["protocol"].get("filters", {}), ensure_ascii=False),
+                json.dumps(
+                    [
+                        {"search_id": s["id"], "filters": s["raw"].get("fullmark", s["raw"]).get("filters", {})}
+                        for s in snap["searches"]
+                        if s["id"] in {x["search_id"] for x in snap["records"] if x["article_id"] == a["id"]}
+                    ],
+                    ensure_ascii=False,
+                ),
                 a["recommendation"].get("reason", ""),
                 json.dumps(a["pdf"], ensure_ascii=False),
                 json.dumps(a["extraction"], ensure_ascii=False),
@@ -88,8 +101,32 @@ def xlsx(snap):
     audits = [["Quando UTC", "Ator", "Ação", "Payload"]] + [
         [stamp(x["created_at"]), x["actor"], x["action"], json.dumps(x["payload"], ensure_ascii=False)] for x in snap["audit"]
     ]
-    searches = [["ID", "String exata", "Tradução PubMed", "Total encontrado", "Limite importação", "Resposta original"]] + [
-        [s["id"], s["query"], s["translated_query"], s["total_found"], s["max_records"], json.dumps(s["raw"], ensure_ascii=False)]
+    searches = [
+        [
+            "ID",
+            "String exata",
+            "Tradução PubMed",
+            "Total encontrado",
+            "Limite importação",
+            "Filtros",
+            "Importados",
+            "Duplicatas",
+            "Novos únicos",
+            "Resposta original",
+        ]
+    ] + [
+        [
+            s["id"],
+            s["query"],
+            s["translated_query"],
+            s["total_found"],
+            s["max_records"],
+            json.dumps(s["raw"].get("fullmark", s["raw"]).get("filters", {}), ensure_ascii=False),
+            s["raw"].get("stats", {}).get("imported", 0),
+            s["raw"].get("stats", {}).get("duplicates", 0),
+            s["raw"].get("stats", {}).get("new", 0),
+            json.dumps(s["raw"], ensure_ascii=False),
+        ]
         for s in snap["searches"]
     ]
     sheets = {"Resumo PRISMA": summary, "Matriz": matrix, "Extração": extracted, "Auditoria": audits, "Buscas": searches}
