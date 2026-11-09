@@ -1,6 +1,6 @@
 {
   "version": "0.2.0",
-  "tests": 43,
+  "tests": 45,
   "js_syntax": "passed",
   "lint": "passed",
   "pubmed_live": {
@@ -26,7 +26,8 @@
     "filtered_read_execution": "14092",
     "status": "success",
     "matching_tasks": 0,
-    "client_comment_tested": false
+    "client_comment_tested": false,
+    "attachments": "Parser, selection and host restrictions tested; no real client attachment downloaded"
   },
   "native_pubmed_browser_csv": {
     "automated": false,

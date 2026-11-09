@@ -91,8 +91,14 @@ class BulkDecision(BaseModel):
     reason: str = Field(min_length=5, max_length=4000)
 
 
+class IntakeAttachment(BaseModel):
+    filename: str = Field(min_length=1, max_length=200)
+    url: str = Field(min_length=10, max_length=4000)
+
+
 class IntakeCreate(BaseModel):
     title: str = Field(min_length=3, max_length=300)
     task_id: str = Field(min_length=3, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
-    production_text: str = Field(min_length=20, max_length=20000)
+    production_text: str = Field(default="", max_length=20000)
+    attachments: list[IntakeAttachment] = Field(default_factory=list, max_length=20)
     max_records: int = Field(default=50, ge=1, le=200)

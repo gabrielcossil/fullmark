@@ -181,3 +181,37 @@ def test_auto_approval_waits_for_strategy(client, auth):
     rid = client.post("/reviews", headers=auth, json=body).json()["id"]
     assert client.post("/reviews/" + rid + "/approve", headers=auth).status_code == 409
     assert client.get("/reviews/" + rid, headers=auth).json()["review"]["approved_at"] is None
+
+
+def test_clickup_attachment_blocks_arbitrary_hosts():
+    for url in [
+        "http://attachments2.clickup.com/file.txt",
+        "https://127.0.0.1/file.txt",
+        "https://example.org/file.txt",
+        "https://attachments2.clickup.com.evil.test/file.txt",
+    ]:
+        with pytest.raises(ValueError):
+            research.fetch_clickup_document(url, "ficha.txt")
+
+
+def test_intake_reads_identified_production_attachment(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings(), "automation_owner_id", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setattr(
+        research,
+        "fetch_clickup_document",
+        lambda url, filename: {"filename": filename, "text": "Texto extraído da ficha: prevenção de quedas em idosos.", "sha256": "a" * 64},
+    )
+    body = {
+        "title": "Ficha anexada",
+        "task_id": "qa-attachment-001",
+        "attachments": [{"filename": "Ficha de produção.txt", "url": "https://attachments2.clickup.com/example.txt"}],
+    }
+    h = {"X-Internal-Token": settings().internal_token}
+    r = client.post("/internal/intake", headers=h, json=body)
+    assert r.status_code == 202
+    with db.Session() as s:
+        review = s.get(db.Review, r.json()["review_id"])
+        assert "Texto extraído" in review.protocol["source_document"]["text"]
+        assert "url" not in review.protocol["source_document"] and review.approved_at is None

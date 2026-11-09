@@ -112,7 +112,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ { title: $json.name, task_id: $json.id, production_text: ($json.description || $json.text_content || \"\").slice(0,20000), max_records:50 } }}",
+        "jsonBody": "={{ { title: $json.name, task_id: $json.id, production_text: ($json.description || $json.text_content || \"\").slice(0,20000), max_records:50, attachments: ($json.attachments || []).slice(0,20).map(a => ({ filename: a.title || a.name || \"anexo\", url: a.url || \"\" })) } }}",
         "options": {
           "timeout": 60000
         }
@@ -135,6 +135,30 @@
       "parameters": {
         "method": "DELETE",
         "url": "={{ \"https://api.clickup.com/api/v2/task/\" + $(\"Uma entrada por tarefa\").item.json.id + \"/tag/fullmark-pesquisar\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "clickUpApi": {
+          "name": "ClickUp [Cossil]"
+        }
+      }
+    },
+    {
+      "id": "d4cc3e1e-8bab-4302-9f25-ddbf54c0dbc1",
+      "name": "Ler ficha e anexos da tarefa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        650,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ \"https://api.clickup.com/api/v2/task/\" + $json.id }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "clickUpApi",
         "options": {
@@ -171,22 +195,33 @@
         ]
       ]
     },
-    "Uma entrada por tarefa": {
+    "Preparar pré-inicial sem aprovar": {
       "main": [
         [
           {
-            "node": "Preparar pré-inicial sem aprovar",
+            "node": "Consumir comando recebido",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Preparar pré-inicial sem aprovar": {
+    "Uma entrada por tarefa": {
       "main": [
         [
           {
-            "node": "Consumir comando recebido",
+            "node": "Ler ficha e anexos da tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler ficha e anexos da tarefa": {
+      "main": [
+        [
+          {
+            "node": "Preparar pré-inicial sem aprovar",
             "type": "main",
             "index": 0
           }

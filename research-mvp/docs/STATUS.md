@@ -1,6 +1,6 @@
 # Atualização · Research Studio 0.2
 
-Novo layout, fichas, filtros, descritores, progresso, revisão e entrega ao Drive estão publicados. Quatro workflows n8n ativos. [Guia, evidências e limites atuais](WORKSPACE-V2.md). Validação atual: 43 testes. O relato abaixo preserva as evidências da implantação inicial.
+Novo layout, fichas, filtros, descritores, progresso, revisão e entrega ao Drive estão publicados. Quatro workflows n8n ativos. [Guia, evidências e limites atuais](WORKSPACE-V2.md). Validação atual: 45 testes. O relato abaixo preserva as evidências da implantação inicial.
 
 # Estado verificado · 09/11/2026
 

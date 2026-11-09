@@ -558,6 +558,24 @@ def intake(body: IntakeCreate, db: DB):
     for r in db.scalars(select(Review).where(Review.owner_id == owner)):
         if r.protocol.get("clickup_task_id") == body.task_id:
             return {"review_id": r.id, "created": False}
+    source = {"filename": "Ficha ClickUp " + body.task_id, "text": body.production_text}
+    candidates = [a for a in body.attachments if a.filename.lower().endswith((".pdf", ".docx", ".txt"))]
+    preferred = [a for a in candidates if any(x in a.filename.casefold() for x in ("ficha", "produção", "producao"))]
+    if preferred or len(candidates) == 1:
+        from .research import fetch_clickup_document
+
+        a = (preferred or candidates)[0]
+        try:
+            source = fetch_clickup_document(a.url, a.filename)
+        except Exception:
+            raise HTTPException(
+                422, "Não foi possível ler a ficha anexada com segurança. Envie PDF/DOCX/TXT pelo painel ou use a descrição textual."
+            )
+        source["text"] = (source["text"] + "\n\nContexto da tarefa:\n" + body.production_text)[:20000]
+    elif len(candidates) > 1:
+        raise HTTPException(422, "Há vários documentos. Identifique a ficha pelo nome ou envie o documento pelo painel.")
+    if len(str(source["text"]).strip()) < 20:
+        raise HTTPException(422, "Inclua uma ficha textual na descrição ou anexe PDF/DOCX/TXT identificado como ficha de produção.")
     p = {
         "question": "Pergunta em elaboração para: " + body.title,
         "inclusion": ["Rascunho: revisar critérios sugeridos antes de aprovar."],
@@ -567,7 +585,7 @@ def intake(body: IntakeCreate, db: DB):
         "max_records": body.max_records,
         "filters": Filters().model_dump(mode="json"),
         "observations": "Entrada automática autorizada pelo comando do ClickUp; aguarda aprovação humana.",
-        "source_document": {"filename": "Ficha ClickUp " + body.task_id, "text": body.production_text},
+        "source_document": source,
         "clickup_task_id": body.task_id,
         "auto_search": True,
     }

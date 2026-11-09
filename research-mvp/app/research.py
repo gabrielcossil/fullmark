@@ -163,3 +163,30 @@ def extract_document(data, filename):
         "truncated": len(content) > 20000,
         "sha256": hashlib.sha256(data).hexdigest(),
     }
+
+
+def fetch_clickup_document(url, filename):
+    """Only provider attachment hosts; no credentials, redirects, or arbitrary URL fetch."""
+    from urllib.parse import urlsplit
+    import httpx
+
+    parsed = urlsplit(url)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname not in {"attachments2.clickup.com", "attachments.clickup.com"}
+        or parsed.username
+        or parsed.password
+        or parsed.port not in (None, 443)
+    ):
+        raise ValueError("Origem do anexo não habilitada; envie a ficha pelo painel.")
+    content = bytearray()
+    with httpx.Client(timeout=25, follow_redirects=False) as client:
+        with client.stream("GET", url) as response:
+            response.raise_for_status()
+            if response.is_redirect:
+                raise ValueError("Anexo redirecionado: envie a ficha pelo painel.")
+            for chunk in response.iter_bytes(65536):
+                content.extend(chunk)
+                if len(content) > 10 * 1024 * 1024:
+                    raise ValueError("Anexo excede 10 MB")
+    return extract_document(bytes(content), filename)

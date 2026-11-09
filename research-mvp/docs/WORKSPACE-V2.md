@@ -31,14 +31,14 @@ O **CSV nativo de Advanced Search / History and Search Details do PubMed** perte
 
 No workspace conectado, espaço **Operacional**, foi criada a etiqueta **fullmark-pesquisar**. Para iniciar:
 
-- Use uma tarefa aberta cujo título seja o tema; coloque a ficha textual na descrição (20 a 20.000 caracteres).
+- Use uma tarefa aberta cujo título seja o tema; coloque a ficha textual na descrição (20 a 20.000 caracteres) ou anexe PDF, DOCX ou TXT. Identifique o arquivo no nome como ficha de produção.
 - Adicione a etiqueta `fullmark-pesquisar`.
 - O n8n consulta apenas esse espaço e etiqueta a cada cinco minutos, cria uma pesquisa na conta redacao@fullmark.com.br e agenda planejamento.
 - Após receber a entrada, a etiqueta é retirada da tarefa para consumir o comando. A tarefa não é excluída. Cada tarefa gera uma pesquisa; repetir o comando não duplica trabalhos ou custos de planejamento.
 - Abra o painel, aplique/revise critérios e aprove o protocolo. A primeira estratégia e sugestões de triagem podem continuar automaticamente. Os artigos aguardam sua aprovação.
 - Após as recomendações da busca automática, uma atualização é enviada à tarefa vinculada. Também há botão de atualização manual com ID explícito da tarefa.
 
-Anexos do ClickUp não são baixados nesta versão: envie-os pelo painel ou use descrição textual. A leitura de comandos foi testada contra a API real com zero tarefas marcadas; não alteramos uma tarefa real de cliente para testar notificações.
+Anexos PDF, DOCX e TXT podem alimentar a entrada: o sistema lê uma ficha identificada pelo nome ou o único documento elegível. Vários arquivos ambíguos exigem escolha pelo painel. O download só aceita HTTPS dos hosts de anexos ClickUp habilitados, sem redirecionamentos, até 10 MB. Outros hosts, arquivos sem texto ou inacessíveis exigem envio pelo painel. A seleção/leitura de anexos foi testada com respostas controladas; não baixamos um anexo real de cliente nesta validação. A leitura de comandos foi testada contra a API real com zero tarefas marcadas; não alteramos uma tarefa real de cliente para testar notificações.
 
 ## Pré-inicial e trabalho completo
 
@@ -57,7 +57,7 @@ A outbox congela um snapshot por entrega e grava cada ID externo confirmado. Uma
 
 ## Validação desta versão
 
-- 43 testes automatizados; lint e sintaxe JavaScript aprovados. Um aviso de depreciação Starlette/httpx permanece.
+- 45 testes automatizados; lint e sintaxe JavaScript aprovados. Um aviso de depreciação Starlette/httpx permanece.
 - Rascunho editável e protocolo aprovado imutável testados no PostgreSQL hospedado em transação revertida.
 - PubMed real: uma referência importada novamente resultou em `imported=1`, `new=0`, `duplicates=1`.
 - Planejamento real Browser Use: run `484a82c1-01ae-4971-8052-1f7ded91ad97`, concluído, duas estratégias, quatro candidatos MeSH confirmados; custo reportado US$ 0,012621.
