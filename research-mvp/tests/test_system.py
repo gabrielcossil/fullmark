@@ -383,3 +383,30 @@ def test_retracted_cloud_paper_needs_human_review():
     )
     url, record = files.pmc_cloud_pdf("PMC1", "1")
     assert url is None and "Retracted" in record["reason"]
+
+
+def test_setup_mode_is_closed_to_research_routes():
+    from app.setup import app as setup_app
+    from fastapi.testclient import TestClient
+
+    with TestClient(setup_app) as c:
+        assert c.get("/health/live").json()["ready"] is False
+        assert c.get("/health/ready").status_code == 503
+        assert c.get("/reviews").status_code == 404
+        assert c.post("/internal/tick").status_code == 404
+
+
+@respx.mock
+def test_storage_proxy_keeps_supabase_secret_out_of_render_requests(monkeypatch):
+    monkeypatch.setattr(settings(), "storage_proxy_url", "https://project.supabase.co/functions/v1/fullmark-storage")
+    monkeypatch.setattr(settings(), "storage_proxy_token", "server-only-storage-capability-token")
+    monkeypatch.setattr(settings(), "supabase_secret_key", "must-not-leave-supabase-in-proxy-mode")
+    route = respx.post("https://project.supabase.co/functions/v1/fullmark-storage").mock(
+        return_value=httpx.Response(200, json={"Key": "test.json"})
+    )
+    files.put("owner/review/test.json", b"[]", "application/json")
+    request = route.calls.last.request
+    assert request.headers["X-Storage-Token"] == "server-only-storage-capability-token"
+    assert "apikey" not in request.headers and "Authorization" not in request.headers
+    respx.get("https://project.supabase.co/functions/v1/fullmark-storage").mock(return_value=httpx.Response(200, content=b"[]"))
+    assert files.get("owner/review/test.json") == b"[]"

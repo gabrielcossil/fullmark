@@ -71,3 +71,17 @@ Sucesso de uma chamada HTTP não é evidência de importação no n8n. Verifique
 - [NCBI E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25501/)
 - [PMC Cloud AWS: distribuição atual](https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/)
 - [n8n deployment configuration](https://docs.n8n.io/hosting/configuration/environment-variables/deployment/)
+
+## Instalação desta sessão
+
+O código já está no GitHub em `gabrielcossil/fullmark`, branch `fullmark-research-mvp`, pasta `research-mvp`. Serviço Render: https://fullmark-research-api.onrender.com. O deploy inicial está live, mas fechado em modo de configuração, aguardando DATABASE_URL e SUPABASE_SECRET_KEY. SUPABASE_URL, chave publicável, INTERNAL_TOKEN aleatório, ENVIRONMENT, DEMO_MODE e NCBI_EMAIL já foram definidos. Configure também Browser Use para liberar pesquisa web. Depois salve e reimplante; auto-deploy está desligado. A API somente fica pronta quando `/health/ready` retorna 200.
+
+Nos workflows já criados, o URL correto foi preenchido. Crie uma credencial `Fullmark Internal` no editor n8n e vincule aos dois nós HTTP. O conector permite listar e vincular credenciais, mas não inserir seus valores secretos. Não é necessário reenviar arquivos ou criar os workflows novamente.
+
+## Alternativa usada: configuração sem senha administrativa
+
+Nesta implantação, `DATABASE_URL` usa o papel restrito `fullmark_runtime` criado pela terceira migração. A senha desse papel é gerada após a migração e configurada via conexão administrativa segura; ela não aparece no SQL versionado. O papel tem SELECT/INSERT/UPDATE somente nas tabelas mutáveis do aplicativo e SELECT/INSERT em auditoria/decisões. Não tem superusuário, BYPASSRLS, acesso a Auth nem chave service role. As políticas de backend são específicas desse papel; os clientes continuam restritos por proprietário. Não execute migrações com essa credencial, pois ela não possui DDL.
+
+`STORAGE_PROXY_URL` e `STORAGE_PROXY_TOKEN` substituem `SUPABASE_SECRET_KEY` no Render. A função `fullmark-storage` usa seu próprio `SUPABASE_SERVICE_ROLE_KEY` fornecido pelo ambiente Supabase e nunca o retorna. Antes de implantar uma cópia da função, substitua `CONFIGURE_AT_DEPLOYMENT` pelo SHA256 hexadecimal de um token forte novo; o token em texto fica apenas no ambiente de servidor. Nesta sessão isso já foi feito automaticamente. Para rotação, atualize o hash da função e o segredo Render juntos. A função usa autenticação própria, por isso o gateway JWT está desabilitado; sem o token correto retorna 401.
+
+A conta Browser Use e a credencial n8n ainda dependem de sessão autenticada do usuário nos respectivos painéis. Não envie senhas nem chaves nesta conversa.

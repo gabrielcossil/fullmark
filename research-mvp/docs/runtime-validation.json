@@ -1,0 +1,11 @@
+{
+  "database": {
+    "host": "aws-0-us-east-1.pooler.supabase.com",
+    "role": "fullmark_runtime",
+    "query_ok": true
+  },
+  "storage_unauthorized_http": 401,
+  "storage_upload_http": 200,
+  "storage_read_verified": true,
+  "storage_fixture_path": "1f655ce5-1323-4580-83ae-d61461bcb09f/9be34f97-283d-494a-91dc-90f0fe47710a/text/7b789c47-85cf-4062-bedc-5c473084e385/188bff1d6f78777bda2d307eb098ecfea2a0c7697791fcd969a8c1b5cfb0105b.json"
+}

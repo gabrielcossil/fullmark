@@ -104,7 +104,15 @@ class Job(Base):
     created_at: Mapped[float] = mapped_column(Float, default=now)
 
 
-engine = create_engine(settings().database_url, pool_pre_ping=True)
+engine = create_engine(
+    settings().database_url,
+    pool_pre_ping=True,
+    **(
+        {"pool_size": 2, "max_overflow": 2, "pool_timeout": 15, "connect_args": {"connect_timeout": 10}}
+        if settings().database_url.startswith("postgresql")
+        else {}
+    ),
+)
 if engine.dialect.name == "sqlite":
 
     @event.listens_for(engine, "connect")

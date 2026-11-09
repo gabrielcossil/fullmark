@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "<__PLACEHOLDER_VALUE__URL HTTPS da API Fullmark seguida de /internal/queue__>",
+        "url": "https://fullmark-research-api.onrender.com/internal/queue",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {

@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-09",
+  "supabase": {
+    "project": "blgzcajmjuivaxyblgdi",
+    "region": "us-east-1",
+    "application_tables": 7,
+    "tracking_tables": 1,
+    "all_rls_enabled": true,
+    "client_write_grants": 0,
+    "bucket": "fullmark-private",
+    "bucket_public": false,
+    "live_transactional_rls_checks": "passed; fixtures rolled back",
+    "security_advisories": []
+  },
+  "n8n": {
+    "project": "Aptus Digital <aptusworkspace@gmail.com>",
+    "project_type": "personal",
+    "process_workflow": "0SPEW7DFBBXjQRHe",
+    "monitor_workflow": "nbIthVaFfpyofVKt",
+    "published": false,
+    "simulated_tests": [
+      {
+        "execution": "13823",
+        "expected": "success",
+        "observed": "success"
+      },
+      {
+        "execution": "13824",
+        "expected": "success",
+        "observed": "success"
+      },
+      {
+        "execution": "13825",
+        "expected": "error",
+        "observed": "error"
+      }
+    ]
+  },
+  "render": {
+    "service": "srv-dbp2a23l550s73c4c340",
+    "plan": "free",
+    "url": "https://fullmark-research-api.onrender.com",
+    "initial_deploy": "dep-dbp2a2rl550s73c4c4g0",
+    "initial_deploy_status": "live",
+    "live_health_status": "setup_pending",
+    "readiness_http": 503,
+    "production_research_ready": false
+  },
+  "python_tests": {
+    "passed": 30,
+    "warnings": 1
+  }
+}

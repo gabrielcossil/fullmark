@@ -44,7 +44,16 @@ def headers():
 
 def put(path, data, content_type):
     s = settings()
-    if s.supabase_url:
+    if s.storage_proxy_url:
+        with httpx.Client(timeout=40) as c:
+            r = c.post(
+                s.storage_proxy_url,
+                params={"path": path},
+                headers={"X-Storage-Token": s.storage_proxy_token, "Content-Type": content_type},
+                content=data,
+            )
+            r.raise_for_status()
+    elif s.supabase_url:
         with httpx.Client(timeout=40) as c:
             r = c.post(
                 s.supabase_url + "/storage/v1/object/fullmark-private/" + path,
@@ -61,6 +70,11 @@ def put(path, data, content_type):
 
 def get(path):
     s = settings()
+    if s.storage_proxy_url:
+        with httpx.Client(timeout=40) as c:
+            r = c.get(s.storage_proxy_url, params={"path": path}, headers={"X-Storage-Token": s.storage_proxy_token})
+            r.raise_for_status()
+            return r.content
     if s.supabase_url:
         with httpx.Client(timeout=40) as c:
             r = c.get(s.supabase_url + "/storage/v1/object/fullmark-private/" + path, headers=headers())

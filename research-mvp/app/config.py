@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_publishable_key: str = ""
     supabase_secret_key: str = ""
+    storage_proxy_url: str = ""
+    storage_proxy_token: str = ""
     internal_token: str = ""
     browser_use_api_key: str = ""
     browser_network_policy_id: str = ""
@@ -26,6 +28,13 @@ def settings():
     if s.environment == "production":
         if s.demo_mode or not s.database_url.startswith("postgresql+psycopg://"):
             raise RuntimeError("Production requires PostgreSQL and demo_mode=false")
-        if not all((s.supabase_url, s.supabase_publishable_key, s.supabase_secret_key, len(s.internal_token) >= 32)):
+        if not all(
+            (
+                s.supabase_url,
+                s.supabase_publishable_key,
+                (s.supabase_secret_key or (s.storage_proxy_url and len(s.storage_proxy_token) >= 32)),
+                len(s.internal_token) >= 32,
+            )
+        ):
             raise RuntimeError("Production credentials are incomplete")
     return s

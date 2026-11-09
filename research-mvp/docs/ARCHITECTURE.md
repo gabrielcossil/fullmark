@@ -14,7 +14,8 @@ flowchart LR
   W --> BU[Browser Use Cloud V4]
   W --> EP[Europe PMC: licença e identidade]
   W --> PMC[PMC Cloud: versão e PDF]
-  W --> ST[Supabase Storage privado]
+  W --> SP[Edge Function: Storage autenticado]
+  SP --> ST[Supabase Storage privado]
   DB --> EX[Snapshot / Excel / fluxo PRISMA]
   ST --> UI
   EX --> H
@@ -41,7 +42,7 @@ Deduplicação: DOI normalizado; na ausência dele, PMID. PMID também reconcili
 
 Login usa Supabase Auth; o backend valida cada access token com `/auth/v1/user`. Não aceita claims de usuário sem validação remota e não usa `user_metadata` para autorização. A interface mantém tokens apenas na memória; o refresh token permite renovar a sessão durante o uso e é descartado ao sair/recarregar.
 
-Todas as operações de pesquisa verificam `owner_id`. Revisores diferentes não compartilham pesquisas neste MVP. O projeto Supabase deve ter cadastro público desabilitado e contas convidadas pela Fullmark. A API aplica autorização também ao operar com a conexão privilegiada do banco. A credencial interna só permite executar/consultar a fila; não aprova protocolos nem decisões.
+Todas as operações de pesquisa verificam `owner_id`. Revisores diferentes não compartilham pesquisas neste MVP. O projeto Supabase deve ter cadastro público desabilitado e contas convidadas pela Fullmark. A API aplica autorização também ao operar com o papel dedicado de backend, restrito às tabelas do aplicativo. A credencial interna só permite executar/consultar a fila; não aprova protocolos nem decisões.
 
 RLS está ativo em todas as tabelas. `authenticated` tem somente SELECT por proprietário; `anon` não tem acesso. Escrita ocorre pelo backend autorizado. Storage privado usa caminhos `owner_id/review_id/...`; leitura direta é limitada ao proprietário, escrita cliente negada. Secret key e conexão Postgres nunca chegam à interface.
 
@@ -83,3 +84,9 @@ PubMed e PDF podem repetir uma tentativa; gravações são idempotentes por regi
 A criação de uma execução Browser Use é uma operação paga sem garantia de idempotência documentada. Antes de enviá-la, persistimos `submission_started`. Se o processo cair ou a resposta se perder antes de gravar o run ID, a tarefa fica `needs_reconciliation`: não é reenviada automaticamente. Um revisor verifica o dashboard do fornecedor e vincula o run ID existente. Se não houver execução, o operador deve confirmar isso no fornecedor antes de fazer nova solicitação. O polling reutiliza o ID, sem criar novos runs.
 
 O contrato V4 foi conferido com OpenAPI publicado em 09/11/2026. O retorno é validado por schema, conjunto de article IDs e citação literal contida no título/resumo original. Ausência de evidência exige `uncertain`. Não existe decisão final automática.
+
+## Credenciais de runtime dedicadas
+
+A terceira migração cria `fullmark_runtime` inicialmente NOLOGIN. O provisionamento seguro habilita LOGIN e gera senha aleatória fora do histórico SQL. Esse papel não é superusuário, não tem BYPASSRLS e não é exposto como papel JWT de clientes. Políticas RLS específicas dão a ele acesso de servidor apenas às tabelas do aplicativo, mantendo os checks de proprietário na API. O limite de conexão é oito e os pools Python são limitados. Auditoria/decisões não recebem grants de UPDATE ou DELETE.
+
+A ponte Storage é uma Edge Function pequena: só aceita GET/POST com token de servidor, paths UUID/UUID/pdf-ou-text/UUID/checksum e bucket fixo. O hash SHA256 do token fica no código; o valor secreto está no Render. O service role real permanece no ambiente Supabase. A autenticação dessa ponte foi testada no serviço real.
