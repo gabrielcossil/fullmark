@@ -33,7 +33,10 @@ def xlsx(snap):
             "Título/resumo humano",
             "Texto completo humano",
             "Motivo texto completo",
-            "Motivo título/resumo", "Estratégias de origem", "Filtros", "Justificativa IA",
+            "Motivo título/resumo",
+            "Estratégias de origem",
+            "Filtros",
+            "Justificativa IA",
             "PDF/licença",
             "Extração com páginas",
         ]
@@ -57,8 +60,12 @@ def xlsx(snap):
                 ft.get("verdict", "pending"),
                 ft.get("reason"),
                 ta.get("reason"),
-                "\n".join(s["query"] for s in snap["searches"] if s["id"] in {x["search_id"] for x in snap["records"] if x["article_id"]==a["id"]}),
-                json.dumps(snap["review"]["protocol"].get("filters", {}),ensure_ascii=False),
+                "\n".join(
+                    s["query"]
+                    for s in snap["searches"]
+                    if s["id"] in {x["search_id"] for x in snap["records"] if x["article_id"] == a["id"]}
+                ),
+                json.dumps(snap["review"]["protocol"].get("filters", {}), ensure_ascii=False),
                 a["recommendation"].get("reason", ""),
                 json.dumps(a["pdf"], ensure_ascii=False),
                 json.dumps(a["extraction"], ensure_ascii=False),
@@ -157,57 +164,209 @@ def xlsx(snap):
 
 def prisma_svg(p):
     # PRISMA 2020 database-only layout: side exclusions and vertical selection stages.
-    parts=['<svg xmlns="http://www.w3.org/2000/svg" width="1150" height="1130" viewBox="0 0 1150 1130"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8Z" fill="#345471"/></marker></defs><rect width="1150" height="1130" fill="white"/><g font-family="Arial,sans-serif" fill="#152e49"><text x="40" y="40" font-size="24" font-weight="bold">FULLMARK · Fluxo PRISMA 2020</text><text x="40" y="68" font-size="14">'+('Seleção concluída' if p['complete'] else 'PARCIAL · há buscas ou decisões pendentes')+'</text>']
-    def box(x,y,w,h,lines,fill='#f1f6fb'):
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1150" height="1130" viewBox="0 0 1150 1130"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8Z" fill="#345471"/></marker></defs><rect width="1150" height="1130" fill="white"/><g font-family="Arial,sans-serif" fill="#152e49"><text x="40" y="40" font-size="24" font-weight="bold">FULLMARK · Fluxo PRISMA 2020</text><text x="40" y="68" font-size="14">'
+        + ("Seleção concluída" if p["complete"] else "PARCIAL · há buscas ou decisões pendentes")
+        + "</text>"
+    ]
+
+    def box(x, y, w, h, lines, fill="#f1f6fb"):
         parts.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="6" fill="{fill}" stroke="#6484a2"/>')
-        for i,line in enumerate(lines):parts.append(f'<text x="{x+16}" y="{y+27+i*23}" font-size="15">{escape(str(line))}</text>')
-    def arrow(x,y,xx,yy):parts.append(f'<path d="M{x} {y} L{xx} {yy}" stroke="#345471" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>')
-    for y,h,label in [(110,150,'Identificação'),(300,570,'Seleção'),(910,115,'Inclusão')]:
-        box(32,y,45,h,[], '#dfeefa');parts.append(f'<text transform="translate(61,{y+h-20}) rotate(-90)" font-size="15" font-weight="bold">{label}</text>')
-    box(110,110,470,115,['Registros identificados em bases de dados',f"PubMed (n = {p['identified']})",'Contagem dos registros efetivamente importados'])
-    box(670,110,440,115,['Registros removidos antes da triagem',f"Duplicatas removidas (n = {p['duplicates_removed']})",'Remoções por automação: 0'])
-    arrow(580,165,670,165);arrow(345,225,345,300)
-    box(110,300,470,95,[f"Registros para triagem (n = {p['identified']-p['duplicates_removed']})",f"Triagem concluída: {p['screened']} · pendente: {p['title_abstract_pending']}"])
-    box(670,300,440,95,['Registros excluídos após título/resumo',f"(n = {p['title_abstract_excluded']})"]);arrow(580,345,670,345);arrow(345,395,345,455)
-    box(110,455,470,95,['Relatórios procurados para recuperação',f"(n = {p['reports_sought']})"])
-    box(670,455,440,95,[f"Relatórios não recuperados (n = {p['reports_not_retrieved']})",f"Recuperação pendente (n = {p['reports_retrieval_pending']})"]);arrow(580,500,670,500);arrow(345,550,345,615)
-    box(110,615,470,115,['Relatórios avaliados para elegibilidade',f"(n = {p['reports_assessed']})",f"Avaliação de texto pendente: {p['full_text_pending']}"])
-    reasons=[f"Relatórios excluídos (n = {p['full_text_excluded']})"]
-    for reason,n in list(p['full_text_exclusion_reasons'].items())[:4]:reasons.append(reason[:45]+f' (n = {n})')
-    if len(p['full_text_exclusion_reasons'])>4:reasons.append('Demais motivos no histórico JSON')
-    box(670,615,440,165,reasons);arrow(580,670,670,670);arrow(345,730,345,910)
-    box(110,910,470,105,[f"Relatórios incluídos (n = {p['included_reports']})",'Estudos incluídos: agrupamento humano pendente'], '#dfeefa')
-    parts.append('<text x="32" y="1060" font-size="12">Adaptado de PRISMA 2020 · Page et al., BMJ 2021;372:n71 · CC BY 4.0</text><text x="32" y="1082" font-size="12">https://www.prisma-statement.org/prisma-2020-flow-diagram · Motivos completos no histórico.</text><text x="32" y="1104" font-size="12">Resultados totais do PubMed podem exceder o limite importado. Não confundir relatórios com estudos distintos.</text></g></svg>')
-    return ''.join(parts).encode()
+        for i, line in enumerate(lines):
+            parts.append(f'<text x="{x + 16}" y="{y + 27 + i * 23}" font-size="15">{escape(str(line))}</text>')
+
+    def arrow(x, y, xx, yy):
+        parts.append(f'<path d="M{x} {y} L{xx} {yy}" stroke="#345471" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>')
+
+    for y, h, label in [(110, 150, "Identificação"), (300, 570, "Seleção"), (910, 115, "Inclusão")]:
+        box(32, y, 45, h, [], "#dfeefa")
+        parts.append(f'<text transform="translate(61,{y + h - 20}) rotate(-90)" font-size="15" font-weight="bold">{label}</text>')
+    box(
+        110,
+        110,
+        470,
+        115,
+        ["Registros identificados em bases de dados", f"PubMed (n = {p['identified']})", "Contagem dos registros efetivamente importados"],
+    )
+    box(
+        670,
+        110,
+        440,
+        115,
+        ["Registros removidos antes da triagem", f"Duplicatas removidas (n = {p['duplicates_removed']})", "Remoções por automação: 0"],
+    )
+    arrow(580, 165, 670, 165)
+    arrow(345, 225, 345, 300)
+    box(
+        110,
+        300,
+        470,
+        95,
+        [
+            f"Registros para triagem (n = {p['identified'] - p['duplicates_removed']})",
+            f"Triagem concluída: {p['screened']} · pendente: {p['title_abstract_pending']}",
+        ],
+    )
+    box(670, 300, 440, 95, ["Registros excluídos após título/resumo", f"(n = {p['title_abstract_excluded']})"])
+    arrow(580, 345, 670, 345)
+    arrow(345, 395, 345, 455)
+    box(110, 455, 470, 95, ["Relatórios procurados para recuperação", f"(n = {p['reports_sought']})"])
+    box(
+        670,
+        455,
+        440,
+        95,
+        [f"Relatórios não recuperados (n = {p['reports_not_retrieved']})", f"Recuperação pendente (n = {p['reports_retrieval_pending']})"],
+    )
+    arrow(580, 500, 670, 500)
+    arrow(345, 550, 345, 615)
+    box(
+        110,
+        615,
+        470,
+        115,
+        [
+            "Relatórios avaliados para elegibilidade",
+            f"(n = {p['reports_assessed']})",
+            f"Avaliação de texto pendente: {p['full_text_pending']}",
+        ],
+    )
+    reasons = [f"Relatórios excluídos (n = {p['full_text_excluded']})"]
+    for reason, n in list(p["full_text_exclusion_reasons"].items())[:4]:
+        reasons.append(reason[:45] + f" (n = {n})")
+    if len(p["full_text_exclusion_reasons"]) > 4:
+        reasons.append("Demais motivos no histórico JSON")
+    box(670, 615, 440, 165, reasons)
+    arrow(580, 670, 670, 670)
+    arrow(345, 730, 345, 910)
+    box(
+        110,
+        910,
+        470,
+        105,
+        [f"Relatórios incluídos (n = {p['included_reports']})", "Estudos incluídos: agrupamento humano pendente"],
+        "#dfeefa",
+    )
+    parts.append(
+        '<text x="32" y="1060" font-size="12">Adaptado de PRISMA 2020 · Page et al., BMJ 2021;372:n71 · CC BY 4.0</text><text x="32" y="1082" font-size="12">https://www.prisma-statement.org/prisma-2020-flow-diagram · Motivos completos no histórico.</text><text x="32" y="1104" font-size="12">Resultados totais do PubMed podem exceder o limite importado. Não confundir relatórios com estudos distintos.</text></g></svg>'
+    )
+    return "".join(parts).encode()
 
 
 def history_csv(snap):
     import csv
-    out=io.StringIO(newline='');w=csv.writer(out)
-    w.writerow(['Source','Search number','Query','Search Details / querytranslation','Results','Imported','Duplicates','New unique','Filters','Executed UTC','Sort','Warnings'])
-    safe=lambda value: "'"+str(value) if str(value).lstrip().startswith(('=','+','-','@')) else str(value)
-    for i,s in enumerate(sorted(snap['searches'],key=lambda x:(x['created_at'],x['id'])),1):
-        raw=s['raw'];context=raw.get('fullmark',raw);stats=raw.get('stats',{});w.writerow([safe(x) for x in ['NCBI E-utilities (not browser session CSV)',i,s['query'],s['translated_query'],s['total_found'],stats.get('imported',0),stats.get('duplicates',0),stats.get('new',0),json.dumps(context.get('filters',{}),ensure_ascii=False),datetime.fromtimestamp(raw.get('executed_at',s['created_at']),timezone.utc).isoformat(),context.get('filters',{}).get('sort','pub date'),json.dumps(raw.get('esearchresult',{}).get('warninglist',{}),ensure_ascii=False)]])
-    return ('\ufeff'+out.getvalue()).encode('utf-8')
+
+    out = io.StringIO(newline="")
+    w = csv.writer(out)
+    w.writerow(
+        [
+            "Source",
+            "Search number",
+            "Query",
+            "Search Details / querytranslation",
+            "Results",
+            "Imported",
+            "Duplicates",
+            "New unique",
+            "Filters",
+            "Executed UTC",
+            "Sort",
+            "Warnings",
+        ]
+    )
+    safe = lambda value: "'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else str(value)
+    for i, s in enumerate(sorted(snap["searches"], key=lambda x: (x["created_at"], x["id"])), 1):
+        raw = s["raw"]
+        context = raw.get("fullmark", raw)
+        stats = raw.get("stats", {})
+        w.writerow(
+            [
+                safe(x)
+                for x in [
+                    "NCBI E-utilities (not browser session CSV)",
+                    i,
+                    s["query"],
+                    s["translated_query"],
+                    s["total_found"],
+                    stats.get("imported", 0),
+                    stats.get("duplicates", 0),
+                    stats.get("new", 0),
+                    json.dumps(context.get("filters", {}), ensure_ascii=False),
+                    datetime.fromtimestamp(raw.get("executed_at", s["created_at"]), timezone.utc).isoformat(),
+                    context.get("filters", {}).get("sort", "pub date"),
+                    json.dumps(raw.get("esearchresult", {}).get("warninglist", {}), ensure_ascii=False),
+                ]
+            ]
+        )
+    return ("\ufeff" + out.getvalue()).encode("utf-8")
 
 
 def methodology(snap):
-    r=snap['review'];p=r['protocol']
-    return '\n'.join(['# Pacote de metodologia · '+r['title'],'','## Instrução para o redator / Claude','Redija uma proposta de metodologia exclusivamente a partir dos dados auditáveis abaixo. Não invente bases, datas, contagens, critérios, resultados ou avaliação de qualidade. Identifique pendências. Preserve as strings exatamente. A aprovação científica cabe ao responsável. Não redija resultados que não constem dos arquivos.','', '## Protocolo',json.dumps(p,ensure_ascii=False,indent=2),'','## Estratégias efetivamente executadas',json.dumps([{'query':s['query'],'translated':s['translated_query'],'total_found':s['total_found'],'raw':s['raw']} for s in snap['searches']],ensure_ascii=False,indent=2),'','## Contagens e pendências',json.dumps(snap['prisma'],ensure_ascii=False,indent=2),'','Este prompt é uma base provisória. O modelo editorial da Fullmark será incorporado quando fornecido.'])
+    r = snap["review"]
+    p = r["protocol"]
+    return "\n".join(
+        [
+            "# Pacote de metodologia · " + r["title"],
+            "",
+            "## Instrução para o redator / Claude",
+            "Redija uma proposta de metodologia exclusivamente a partir dos dados auditáveis abaixo. Não invente bases, datas, contagens, critérios, resultados ou avaliação de qualidade. Identifique pendências. Preserve as strings exatamente. A aprovação científica cabe ao responsável. Não redija resultados que não constem dos arquivos.",
+            "",
+            "## Protocolo",
+            json.dumps(p, ensure_ascii=False, indent=2),
+            "",
+            "## Estratégias efetivamente executadas",
+            json.dumps(
+                [
+                    {"query": s["query"], "translated": s["translated_query"], "total_found": s["total_found"], "raw": s["raw"]}
+                    for s in snap["searches"]
+                ],
+                ensure_ascii=False,
+                indent=2,
+            ),
+            "",
+            "## Contagens e pendências",
+            json.dumps(snap["prisma"], ensure_ascii=False, indent=2),
+            "",
+            "Este prompt é uma base provisória. O modelo editorial da Fullmark será incorporado quando fornecido.",
+        ]
+    )
 
 
 def package(snap):
     from . import files
-    out=io.BytesIO();missing=[];size=0
-    latest={}
-    for d in sorted(snap['decisions'],key=lambda x:(x['created_at'],x['id'])):latest[(d['article_id'],d['stage'])]=d['verdict']
-    with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
-        z.writestr('matriz.xlsx',xlsx(snap));z.writestr('prisma.svg',prisma_svg(snap['prisma']));z.writestr('historico-pubmed.csv',history_csv(snap));z.writestr('historico-completo.json',json.dumps(snap,ensure_ascii=False,indent=2));z.writestr('metodologia.md',methodology(snap))
-        for a in snap['articles']:
-            if latest.get((a['id'],'title_abstract'))!='include':continue
-            if a['pdf'].get('status')!='available':missing.append({'title':a['metadata_json'].get('title'),'doi':a['metadata_json'].get('doi'),'url':a['metadata_json'].get('url'),'reason':a['pdf'].get('reason','PDF legal não disponível')});continue
-            content=files.get(a['pdf']['path'])
-            if size+len(content)>50*1024*1024:missing.append({'title':a['metadata_json'].get('title'),'reason':'Limite de 50 MB do ZIP; baixe este PDF individualmente'});continue
-            z.writestr('artigos/'+a['metadata_json'].get('pmid',a['id'])+'.pdf',content);size+=len(content)
-        z.writestr('artigos-pendentes.json',json.dumps(missing,ensure_ascii=False,indent=2))
+
+    out = io.BytesIO()
+    missing = []
+    size = 0
+    latest = {}
+    for d in sorted(snap["decisions"], key=lambda x: (x["created_at"], x["id"])):
+        latest[(d["article_id"], d["stage"])] = d["verdict"]
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("matriz.xlsx", xlsx(snap))
+        z.writestr("prisma.svg", prisma_svg(snap["prisma"]))
+        z.writestr("historico-pubmed.csv", history_csv(snap))
+        z.writestr("historico-completo.json", json.dumps(snap, ensure_ascii=False, indent=2))
+        z.writestr("metodologia.md", methodology(snap))
+        for a in snap["articles"]:
+            if latest.get((a["id"], "title_abstract")) != "include":
+                continue
+            if a["pdf"].get("status") != "available":
+                missing.append(
+                    {
+                        "title": a["metadata_json"].get("title"),
+                        "doi": a["metadata_json"].get("doi"),
+                        "url": a["metadata_json"].get("url"),
+                        "reason": a["pdf"].get("reason", "PDF legal não disponível"),
+                    }
+                )
+                continue
+            content = files.get(a["pdf"]["path"])
+            if size + len(content) > 50 * 1024 * 1024:
+                missing.append(
+                    {"title": a["metadata_json"].get("title"), "reason": "Limite de 50 MB do ZIP; baixe este PDF individualmente"}
+                )
+                continue
+            z.writestr("artigos/" + a["metadata_json"].get("pmid", a["id"]) + ".pdf", content)
+            size += len(content)
+        z.writestr("artigos-pendentes.json", json.dumps(missing, ensure_ascii=False, indent=2))
     return out.getvalue()

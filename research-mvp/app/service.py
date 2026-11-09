@@ -125,7 +125,7 @@ def snapshot(db, r):
         result = [{c.name: getattr(o, c.name) for c in cls.__table__.columns} for o in db.scalars(select(cls).where(cls.review_id == r.id))]
         if cls is Job:
             for row in result:
-                row["payload"] = {k:v for k,v in row["payload"].items() if k != "snapshot"}
+                row["payload"] = {k: v for k, v in row["payload"].items() if k != "snapshot"}
         return result
 
     return {

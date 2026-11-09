@@ -13,14 +13,18 @@ class Later(Exception):
 
 def ingest(db, job):
     search = db.get(Search, job.payload["search_id"])
+
     def progress(value):
         with Session() as monitor:
             current = monitor.get(Job, job.id)
             current.payload = {**current.payload, "progress": {**value, "updated_at": now()}}
             monitor.commit()
+
     # Preserve the exact query and frozen filter snapshot before receiving provider results.
     context = dict(search.raw or {})
-    records, raw = pubmed.search(search.query, search.max_records, progress=progress, sort=context.get("filters", {}).get("sort", "pub date"))
+    records, raw = pubmed.search(
+        search.query, search.max_records, progress=progress, sort=context.get("filters", {}).get("sort", "pub date")
+    )
     raw["fullmark"] = context
     raw["executed_at"] = now()
     search.raw = raw
@@ -47,9 +51,9 @@ def ingest(db, job):
         exists = db.scalar(select(Record.id).where(Record.search_id == search.id, Record.source_id == metadata["pmid"]))
         if not exists:
             db.add(Record(review_id=job.review_id, search_id=search.id, article_id=article.id, source_id=metadata["pmid"], raw=metadata))
-    search.raw = {**raw, "stats": {"imported":len(records), "new":new_count, "duplicates":duplicate_count}}
+    search.raw = {**raw, "stats": {"imported": len(records), "new": new_count, "duplicates": duplicate_count}}
     if context.get("automatic_screening") and records:
-        enqueue(db, job.review_id, "browser", "auto-"+search.id, {})
+        enqueue(db, job.review_id, "browser", "auto-" + search.id, {})
     audit(
         db,
         job.review_id,
@@ -67,11 +71,25 @@ def ingest(db, job):
 def browse(db, job):
     r = db.get(Review, job.review_id)
     if not job.external_id:
+        if db.scalar(
+            select(Job.id).where(
+                Job.review_id == job.review_id,
+                Job.kind == "browser",
+                Job.id != job.id,
+                Job.external_id.is_not(None),
+                Job.status.in_(["pending", "running"]),
+            )
+        ):
+            raise Later(15)
         if job.payload.get("submission_started"):
             job.status = "needs_reconciliation"
             job.error = "Submission outcome unknown; reconcile Browser Use dashboard before resubmitting"
             return
         articles = list(db.scalars(select(Article).where(Article.review_id == r.id)))
+        if job.request_key.startswith("auto-"):
+            articles = [a for a in articles if not a.recommendation]
+            if not articles:
+                return
         if not articles:
             raise ValueError("Import PubMed records before browser research")
         # Durable marker before the non-idempotent provider request prevents blind paid resubmission.
@@ -121,6 +139,10 @@ def browse(db, job):
             "at": now(),
         }
     audit(db, r.id, "browser-use", "recommendations", {"run_id": job.external_id, "raw_response": raw, "validated": True})
+    if r.protocol.get("auto_search") and r.protocol.get("clickup_task_id"):
+        from .delivery import request_delivery
+
+        request_delivery(db, r, "clickup", "auto-screening-" + job.id, r.protocol["clickup_task_id"])
 
 
 def handle(db, job):
@@ -136,21 +158,35 @@ def handle(db, job):
             r = db.get(Review, job.review_id)
             job.payload = {**job.payload, "submission_started": True}
             db.commit()
-            job.external_id = browser.submit({"title":r.title, **r.protocol}, [], planning=True)
+            job.external_id = browser.submit({"title": r.title, **r.protocol}, [], planning=True)
             db.commit()
             raise Later(15)
         result = browser.poll(job.external_id, planning=True)
         if result is None:
-            if now()-job.created_at > 3600: raise ValueError("Planning timeout")
+            if now() - job.created_at > 3600:
+                raise ValueError("Planning timeout")
             raise Later(15)
         output, raw = result
         checked = []
         for concept in output.concepts:
             for term in concept.mesh:
-                time.sleep(.35)
+                time.sleep(0.35)
                 checked.append(pubmed.verify_mesh(term))
-        job.payload = {**job.payload, "result":output.model_dump(mode="json"), "mesh_verification":checked}
-        audit(db, job.review_id, "browser-use", "planning_proposed", {"run_id":job.external_id,"proposal":output.model_dump(mode="json"),"mesh_verification":checked,"prompt_version":"planning-1.0"})
+        job.payload = {**job.payload, "result": output.model_dump(mode="json"), "mesh_verification": checked}
+        audit(
+            db,
+            job.review_id,
+            "browser-use",
+            "planning_proposed",
+            {
+                "run_id": job.external_id,
+                "proposal": output.model_dump(mode="json"),
+                "mesh_verification": checked,
+                "prompt_version": "planning-1.0",
+                "model": raw.get("model"),
+                "cost_usd": raw.get("totalCostUsd"),
+            },
+        )
     elif job.kind == "browser":
         if db.scalar(select(Job.id).where(Job.review_id == job.review_id, Job.kind == "pubmed", Job.status != "done")):
             raise Later(15)
@@ -184,8 +220,9 @@ def tick():
         # Keep lease CAS only for SQLite, where SELECT FOR UPDATE is unavailable.
         claimed = db.execute(
             update(Job)
-            .where(Job.id == job.id, Job.status == old_status,
-                *([Job.lease_until == old_lease] if db.bind.dialect.name == "sqlite" else []))
+            .where(
+                Job.id == job.id, Job.status == old_status, *([Job.lease_until == old_lease] if db.bind.dialect.name == "sqlite" else [])
+            )
             .values(status="running", lease_until=now() + 300)
         )
         if not claimed.rowcount:

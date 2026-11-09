@@ -1,8 +1,10 @@
-# Fullmark Research · MVP 0.1
+# Fullmark Research · Research Studio 0.2
 
 Aplicação executável para pesquisa bibliográfica: FastAPI, fila persistente PostgreSQL, Supabase Auth/Storage, Browser Use Cloud **V4**, PubMed e workflows n8n. Interface em português incluída no mesmo serviço.
 
 **Estado desta entrega:** MVP publicado e conectado a Supabase, Browser Use V4 e n8n; workflows ativos e teste real na nuvem concluído. Acesso: https://fullmark-research-api.onrender.com. Veja [STATUS.md](docs/STATUS.md) para evidências e limites.
+
+Novo fluxo, layout e automações: [guia da versão 0.2](docs/WORKSPACE-V2.md).
 
 ## Executar localmente
 

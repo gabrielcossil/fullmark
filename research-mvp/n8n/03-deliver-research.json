@@ -1,0 +1,457 @@
+{
+  "name": "Fullmark · Entregar pesquisa no Drive e ClickUp",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "America/Bahia",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 240
+  },
+  "nodes": [
+    {
+      "id": "b2d666bd-9f0b-44fc-8095-36bf25dcfbce",
+      "name": "A cada 30 segundos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2c2d2bf2-c215-4e79-ba23-0c055c8adb91",
+      "name": "Reservar entrega",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://fullmark-research-api.onrender.com/internal/deliveries/next",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 210000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    },
+    {
+      "id": "39ad29f0-8be8-4078-be0e-29c429900538",
+      "name": "Destino da entrega",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "folder",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "folder",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "file",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "clickup",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "clickup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      }
+    },
+    {
+      "id": "f4e8d3f6-477d-4dcb-9369-d64db5db8934",
+      "name": "Criar pasta da pesquisa",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        770,
+        -220
+      ],
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{ $json.folder_name }}",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1bj_TGeKYjDaPBj3HzGQWJApUTCZla0P4"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Fullmark Google Drive Account"
+        }
+      }
+    },
+    {
+      "id": "7c7e9508-2621-4c1b-b76e-862bd9f60759",
+      "name": "Registrar pasta criada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1270,
+        -220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://fullmark-research-api.onrender.com/internal/deliveries/\" + $(\"Reservar entrega\").item.json.job_id + \"/ack\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { action: \"folder\", remote_id: String($json.id), cursor: $(\"Reservar entrega\").item.json.cursor } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    },
+    {
+      "id": "edd9c94e-1e29-4836-966a-2eec82c62002",
+      "name": "Obter arquivo privado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        770,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.download_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 210000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    },
+    {
+      "id": "e85d7f95-c13e-426d-be0f-84ecdb8c3b8a",
+      "name": "Salvar arquivo da pesquisa",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1020,
+        0
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "inputDataFieldName": "data",
+        "name": "={{ $(\"Reservar entrega\").item.json.name }}",
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Reservar entrega\").item.json.folder_id }}"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "options": {
+          "simplifyOutput": true,
+          "appPropertiesUi": {
+            "appPropertyValues": [
+              {
+                "key": "fullmarkJob",
+                "value": "={{ $(\"Reservar entrega\").item.json.job_id }}"
+              },
+              {
+                "key": "fullmarkAsset",
+                "value": "={{ String($(\"Reservar entrega\").item.json.cursor) }}"
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Fullmark Google Drive Account"
+        }
+      }
+    },
+    {
+      "id": "b5ec7548-98a4-4dfb-a21d-e4724d2f9f92",
+      "name": "Registrar arquivo salvo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1270,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://fullmark-research-api.onrender.com/internal/deliveries/\" + $(\"Reservar entrega\").item.json.job_id + \"/ack\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { action: \"file\", remote_id: String($json.id), cursor: $(\"Reservar entrega\").item.json.cursor } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    },
+    {
+      "id": "53fa6f57-11e7-4d48-8512-e0087068758d",
+      "name": "Atualizar tarefa vinculada",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        770,
+        220
+      ],
+      "parameters": {
+        "resource": "comment",
+        "operation": "create",
+        "authentication": "accessToken",
+        "commentOn": "task",
+        "id": "={{ $json.task_id }}",
+        "commentText": "={{ $json.comment }}",
+        "additionalFields": {
+          "notifyAll": false
+        }
+      },
+      "credentials": {
+        "clickUpApi": {
+          "name": "ClickUp [Cossil]"
+        }
+      }
+    },
+    {
+      "id": "9400ba50-6fa6-47d8-87d6-84f4162cd168",
+      "name": "Registrar atualização enviada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1270,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://fullmark-research-api.onrender.com/internal/deliveries/\" + $(\"Reservar entrega\").item.json.job_id + \"/ack\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { action: \"clickup\", remote_id: String($json.id), cursor: $(\"Reservar entrega\").item.json.cursor } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "A cada 30 segundos": {
+      "main": [
+        [
+          {
+            "node": "Reservar entrega",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar entrega": {
+      "main": [
+        [
+          {
+            "node": "Destino da entrega",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destino da entrega": {
+      "main": [
+        [
+          {
+            "node": "Criar pasta da pesquisa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obter arquivo privado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizar tarefa vinculada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar pasta da pesquisa": {
+      "main": [
+        [
+          {
+            "node": "Registrar pasta criada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obter arquivo privado": {
+      "main": [
+        [
+          {
+            "node": "Salvar arquivo da pesquisa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar arquivo da pesquisa": {
+      "main": [
+        [
+          {
+            "node": "Registrar arquivo salvo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar tarefa vinculada": {
+      "main": [
+        [
+          {
+            "node": "Registrar atualização enviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

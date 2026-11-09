@@ -1,0 +1,197 @@
+{
+  "name": "Fullmark · Receber comando de pesquisa do ClickUp",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "America/Bahia",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 240
+  },
+  "nodes": [
+    {
+      "id": "e5fc71b1-a23a-40e3-85b4-3f40675d00f4",
+      "name": "Consultar comandos a cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "203cdcd2-8ef4-4b6c-a5ea-be2781765982",
+      "name": "Ler tarefas com comando Fullmark",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.clickup.com/api/v2/team/9017138254/task",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "tags[]",
+              "value": "fullmark-pesquisar"
+            },
+            {
+              "name": "include_closed",
+              "value": "false"
+            },
+            {
+              "name": "page",
+              "value": "0"
+            },
+            {
+              "name": "subtasks",
+              "value": "false"
+            },
+            {
+              "name": "space_ids[]",
+              "value": "90170426327"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "clickUpApi": {
+          "name": "ClickUp [Cossil]"
+        }
+      }
+    },
+    {
+      "id": "ddf01ecc-c650-4136-bd57-b9414a77b8e2",
+      "name": "Uma entrada por tarefa",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "fieldToSplitOut": "tasks",
+        "include": "noOtherFields",
+        "options": {}
+      }
+    },
+    {
+      "id": "a3156101-0369-48a6-ae07-a762456550d1",
+      "name": "Preparar pré-inicial sem aprovar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://fullmark-research-api.onrender.com/internal/intake",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { title: $json.name, task_id: $json.id, production_text: ($json.description || $json.text_content || \"\").slice(0,20000), max_records:50 } }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
+      }
+    },
+    {
+      "id": "d940c786-976f-4b61-bb88-4e35336c5af4",
+      "name": "Consumir comando recebido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1060,
+        0
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ \"https://api.clickup.com/api/v2/task/\" + $(\"Uma entrada por tarefa\").item.json.id + \"/tag/fullmark-pesquisar\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "clickUpApi": {
+          "name": "ClickUp [Cossil]"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Consultar comandos a cada 5 minutos": {
+      "main": [
+        [
+          {
+            "node": "Ler tarefas com comando Fullmark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler tarefas com comando Fullmark": {
+      "main": [
+        [
+          {
+            "node": "Uma entrada por tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Uma entrada por tarefa": {
+      "main": [
+        [
+          {
+            "node": "Preparar pré-inicial sem aprovar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar pré-inicial sem aprovar": {
+      "main": [
+        [
+          {
+            "node": "Consumir comando recebido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

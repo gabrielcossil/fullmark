@@ -54,21 +54,25 @@ def search(query, limit, progress=None, sort="pub date"):
     if s.ncbi_api_key:
         params["api_key"] = s.ncbi_api_key
     with httpx.Client(timeout=45) as c:
-        r = c.get(BASE + "esearch.fcgi", params={**params, "term": query, "retmode": "json", "retmax": limit, "sort": sort, "usehistory": "y"})
+        r = c.get(
+            BASE + "esearch.fcgi", params={**params, "term": query, "retmode": "json", "retmax": limit, "sort": sort, "usehistory": "y"}
+        )
         r.raise_for_status()
         raw = r.json()
         data = raw["esearchresult"]
         if "ERROR" in raw or data.get("errorlist"):
             raise ValueError("PubMed rejected search")
         ids = data["idlist"]
-        if progress: progress({"stage":"fetching", "found":int(data["count"]), "fetched":0, "target":len(ids)})
+        if progress:
+            progress({"stage": "fetching", "found": int(data["count"]), "fetched": 0, "target": len(ids)})
         records = []
         for i in range(0, len(ids), 25):
             time.sleep(0.35)
             r = c.post(BASE + "efetch.fcgi", data={**params, "id": ",".join(ids[i : i + 25]), "retmode": "xml"})
             r.raise_for_status()
             records.extend(parse(r.text))
-            if progress: progress({"stage":"fetching", "found":int(data["count"]), "fetched":len(records), "target":len(ids)})
+            if progress:
+                progress({"stage": "fetching", "found": int(data["count"]), "fetched": len(records), "target": len(ids)})
         if len(records) != len(ids):
             raise ValueError("PubMed fetch incomplete; retry required")
         return records, raw
@@ -77,13 +81,28 @@ def search(query, limit, progress=None, sort="pub date"):
 def verify_mesh(term):
     """Never label model-invented headings as verified MeSH."""
     if not re.fullmatch(r"[A-Za-z0-9 ,()'\-/]{2,180}", term):
-        return {"term":term,"verified":False,"reason":"Invalid heading format"}
+        return {"term": term, "verified": False, "reason": "Invalid heading format"}
     with httpx.Client(timeout=25) as c:
-        r=c.get(BASE+'esearch.fcgi',params={'db':'mesh','term':'"'+term+'"[MeSH Terms]','retmode':'json','retmax':1,'tool':'fullmark_research','email':settings().ncbi_email})
-        r.raise_for_status();result=r.json()['esearchresult'];ids=result.get('idlist',[])
-        if not ids:return {'term':term,'verified':False,'reason':'Not found in MeSH'}
-        time.sleep(.35)
-        r=c.get(BASE+'esummary.fcgi',params={'db':'mesh','id':ids[0],'retmode':'json'});r.raise_for_status();data=r.json()['result'][ids[0]]
-    heading=data.get('ds_meshterms',[])
-    exact=any(x.casefold()==term.casefold() for x in heading)
-    return {'term':term,'verified':exact,'uid':ids[0],'heading':heading,'source':'https://www.ncbi.nlm.nih.gov/mesh/'+ids[0]}
+        r = c.get(
+            BASE + "esearch.fcgi",
+            params={
+                "db": "mesh",
+                "term": '"' + term + '"[MeSH Terms]',
+                "retmode": "json",
+                "retmax": 1,
+                "tool": "fullmark_research",
+                "email": settings().ncbi_email,
+            },
+        )
+        r.raise_for_status()
+        result = r.json()["esearchresult"]
+        ids = result.get("idlist", [])
+        if not ids:
+            return {"term": term, "verified": False, "reason": "Not found in MeSH"}
+        time.sleep(0.35)
+        r = c.get(BASE + "esummary.fcgi", params={"db": "mesh", "id": ids[0], "retmode": "json"})
+        r.raise_for_status()
+        data = r.json()["result"][ids[0]]
+    heading = data.get("ds_meshterms", [])
+    exact = any(x.casefold() == term.casefold() for x in heading)
+    return {"term": term, "verified": exact, "uid": ids[0], "heading": heading, "source": "https://www.ncbi.nlm.nih.gov/mesh/" + ids[0]}

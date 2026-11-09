@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "tests": 43,
+  "js_syntax": "passed",
+  "lint": "passed",
+  "pubmed_live": {
+    "imported": 1,
+    "new": 0,
+    "duplicates": 1
+  },
+  "planning": {
+    "run": "484a82c1-01ae-4971-8052-1f7ded91ad97",
+    "status": "completed",
+    "mesh_verified": 4,
+    "strategies": 2,
+    "cost_usd": "0.012621"
+  },
+  "drive": {
+    "job": "f7f1cafa-a205-445c-96ea-ce0eb6703c63",
+    "status": "done",
+    "files": 6,
+    "folder": "1CCIHANJLI4JjUTk07m5hw-5AQRkIknXd",
+    "pdf_pages": 18
+  },
+  "clickup": {
+    "filtered_read_execution": "14092",
+    "status": "success",
+    "matching_tasks": 0,
+    "client_comment_tested": false
+  },
+  "native_pubmed_browser_csv": {
+    "automated": false,
+    "blocker": "Browser downloads endpoint HTTP403; required scope unavailable"
+  },
+  "fixtures": "Technical QA only. Synthetic screening; not scientific human approval."
+}

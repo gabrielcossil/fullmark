@@ -92,7 +92,7 @@ class BulkDecision(BaseModel):
 
 
 class IntakeCreate(BaseModel):
-    title: str = Field(min_length=3,max_length=300)
-    task_id: str = Field(min_length=3,max_length=100,pattern=r"^[A-Za-z0-9_-]+$")
-    production_text: str = Field(min_length=20,max_length=20000)
-    max_records: int = Field(default=50,ge=1,le=200)
+    title: str = Field(min_length=3, max_length=300)
+    task_id: str = Field(min_length=3, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+    production_text: str = Field(min_length=20, max_length=20000)
+    max_records: int = Field(default=50, ge=1, le=200)

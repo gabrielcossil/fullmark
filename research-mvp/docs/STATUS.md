@@ -1,3 +1,7 @@
+# Atualização · Research Studio 0.2
+
+Novo layout, fichas, filtros, descritores, progresso, revisão e entrega ao Drive estão publicados. Quatro workflows n8n ativos. [Guia, evidências e limites atuais](WORKSPACE-V2.md). Validação atual: 43 testes. O relato abaixo preserva as evidências da implantação inicial.
+
 # Estado verificado · 09/11/2026
 
 O MVP está publicado em https://fullmark-research-api.onrender.com e `/health/ready` retorna 200. O serviço funciona na nuvem sem o computador do usuário ligado.
