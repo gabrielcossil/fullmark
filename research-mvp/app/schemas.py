@@ -46,3 +46,7 @@ class ExtractionItem(BaseModel):
 
 class ExtractionCreate(BaseModel):
     items: list[ExtractionItem] = Field(min_length=1, max_length=40)
+
+
+class PasswordSet(BaseModel):
+    password: str = Field(min_length=12, max_length=128)

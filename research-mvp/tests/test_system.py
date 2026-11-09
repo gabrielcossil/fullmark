@@ -410,3 +410,21 @@ def test_storage_proxy_keeps_supabase_secret_out_of_render_requests(monkeypatch)
     assert "apikey" not in request.headers and "Authorization" not in request.headers
     respx.get("https://project.supabase.co/functions/v1/fullmark-storage").mock(return_value=httpx.Response(200, content=b"[]"))
     assert files.get("owner/review/test.json") == b"[]"
+
+
+@respx.mock
+def test_invited_user_sets_only_own_password(client, monkeypatch):
+    monkeypatch.setattr(settings(), "demo_mode", False)
+    monkeypatch.setattr(settings(), "supabase_url", "https://project.supabase.co")
+    monkeypatch.setattr(settings(), "supabase_publishable_key", "test-public-key")
+    respx.get("https://project.supabase.co/auth/v1/user").mock(
+        return_value=httpx.Response(200, json={"id": "invited-user", "email": "reviewer@example.test"})
+    )
+    route = respx.put("https://project.supabase.co/auth/v1/user").mock(return_value=httpx.Response(200, json={"id": "invited-user"}))
+    h = {"Authorization": "Bearer invite-session-test"}
+    assert client.get("/auth/me", headers=h).json()["email"] == "reviewer@example.test"
+    assert client.post("/auth/password", headers=h, json={"password": "short"}).status_code == 422
+    assert client.post("/auth/password", headers=h, json={"password": "new-test-password-12345"}).status_code == 200
+    assert route.calls.last.request.headers["Authorization"] == "Bearer invite-session-test"
+    assert json.loads(route.calls.last.request.content) == {"password": "new-test-password-12345"}
+    assert client.post("/auth/password", json={"password": "new-test-password-12345"}).status_code == 401

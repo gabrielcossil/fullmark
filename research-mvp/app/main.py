@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select, text
 from .config import settings
 from .db import Base, engine, Session, Review, Search, Article, Audit, Job, audit, enqueue, now
-from .schemas import ReviewCreate, SearchCreate, DecisionCreate, ExtractionCreate
+from .schemas import ReviewCreate, SearchCreate, DecisionCreate, ExtractionCreate, PasswordSet
 from .service import digest, owned, article_for, decide, snapshot, prisma
 from . import files, exports
 
@@ -331,3 +331,34 @@ def reconcile_job(rid: str, jid: str, body: dict, db: DB, actor: User):
     j.error = ""
     audit(db, rid, actor, "browser_reconciled", {"job_id": jid, "run_id": run_id})
     return {"job_id": jid}
+
+
+@app.get("/auth/me")
+def profile(actor: User, authorization: Annotated[str | None, Header()] = None):
+    if settings().demo_mode and authorization == "Bearer local-demo":
+        return {"id": actor, "email": "Demonstração local"}
+    with httpx.Client(timeout=15) as c:
+        r = c.get(
+            settings().supabase_url + "/auth/v1/user",
+            headers={"apikey": settings().supabase_publishable_key, "Authorization": authorization},
+        )
+    if r.status_code != 200 or r.json().get("id") != actor:
+        raise HTTPException(401, "Sessão inválida")
+    return {"id": actor, "email": r.json().get("email", "")}
+
+
+
+
+@app.post("/auth/password")
+def password_set(body: PasswordSet, actor: User, authorization: Annotated[str | None, Header()] = None):
+    if settings().demo_mode:
+        raise HTTPException(409, "Não há senha de conta na demonstração local")
+    with httpx.Client(timeout=15) as c:
+        r = c.put(
+            settings().supabase_url + "/auth/v1/user",
+            headers={"apikey": settings().supabase_publishable_key, "Authorization": authorization},
+            json={"password": body.password},
+        )
+    if r.status_code != 200:
+        raise HTTPException(400, "Não foi possível definir a senha. Use pelo menos 12 caracteres e tente novamente.")
+    return {"updated": True}

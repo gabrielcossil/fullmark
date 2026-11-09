@@ -34,4 +34,17 @@ $('#browser').onclick=()=>action(async()=>{await api(`/reviews/${rid}/browser`,{
 $('#refresh').onclick=()=>action(()=>load(rid));
 async function download(path,name){const r=await api(path);const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 document.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>action(()=>download(`/reviews/${rid}/export/${b.dataset.export}`,'fullmark.'+b.dataset.export)));
-action(async()=>{const c=await(await api('/config')).json();$('#demo').hidden=!c.demo_mode;if(c.demo_mode)message('Demonstração local. Nenhum acesso externo é simulado como real.');});
+$('#passwordForm').onsubmit=e=>{e.preventDefault();action(async()=>{const f=Object.fromEntries(new FormData(e.target));if(f.password!==f.confirm)throw new Error('As senhas precisam ser iguais.');await api('/auth/password',{method:'POST',body:JSON.stringify({password:f.password})});e.target.reset();$('#passwordSetup').hidden=true;await signed();message('Senha definida. Seu espaço de pesquisa está pronto.');});};
+action(async()=>{
+ const fragment=new URLSearchParams(location.hash.slice(1));
+ if(fragment.has('access_token')){
+  access=fragment.get('access_token');refreshToken=fragment.get('refresh_token')||'';
+  history.replaceState(null,'',location.pathname+location.search);
+  const me=await(await api('/auth/me')).json();
+  if(['invite','recovery'].includes(fragment.get('type'))){$('#login').hidden=true;$('#passwordSetup').hidden=false;$('#accountEmail').textContent='Conta: '+me.email;message('Confirme sua conta acima e defina uma senha para os próximos acessos.');}
+  else await signed();
+ }
+ const c=await(await api('/config')).json();$('#demo').hidden=!c.demo_mode;
+ if(c.demo_mode&&!access)message('Demonstração local. Nenhum acesso externo é simulado como real.');
+ if(fragment.has('error_description')){history.replaceState(null,'',location.pathname+location.search);message(fragment.get('error_description'));}
+});
