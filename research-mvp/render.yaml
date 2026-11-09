@@ -6,7 +6,7 @@ services:
     region: virginia
     plan: free
     healthCheckPath: /health/ready
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     envVars:
       - key: ENVIRONMENT
         value: production
