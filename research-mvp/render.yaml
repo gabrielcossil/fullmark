@@ -1,0 +1,32 @@
+# Source repository must be connected to Render before applying.
+services:
+  - type: web
+    name: fullmark-research-api
+    runtime: docker
+    region: virginia
+    plan: free
+    healthCheckPath: /health/ready
+    autoDeployTrigger: off
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEMO_MODE
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: INTERNAL_TOKEN
+        generateValue: true
+      - key: BROWSER_USE_API_KEY
+        sync: false
+      - key: BROWSER_NETWORK_POLICY_ID
+        sync: false
+      - key: NCBI_EMAIL
+        value: redacao@fullmark.com.br
+# Free web instances sleep. n8n must POST /internal/tick every minute.
+# For continuous processing, create an always-on paid worker only after approving cost.

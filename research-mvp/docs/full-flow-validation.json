@@ -1,0 +1,43 @@
+{
+  "mode": "Isolated local demo; automated test decisions, not human scientific approvals",
+  "providers_real": [
+    "PubMed ESearch/EFetch",
+    "Europe PMC metadata",
+    "PMC Cloud public dataset PDF"
+  ],
+  "storage": "local filesystem; Supabase Storage not validated live",
+  "pmid": "42987252",
+  "pdf_pages": 18,
+  "pdf_sha256": "cfff2d704d665197f828b1dc4855d31c094b9a5afecfc9a74cb89482a61ce134",
+  "license": "cc by",
+  "extraction_quote_verified": true,
+  "prisma": {
+    "identified": 1,
+    "duplicates_removed": 0,
+    "screened": 1,
+    "title_abstract_excluded": 0,
+    "title_abstract_pending": 0,
+    "reports_sought": 1,
+    "reports_not_retrieved": 0,
+    "reports_retrieval_pending": 0,
+    "reports_available": 1,
+    "reports_assessed": 1,
+    "full_text_excluded": 0,
+    "full_text_pending": 0,
+    "included_reports": 1,
+    "full_text_exclusion_reasons": {},
+    "study_count": null,
+    "note": "Contagens de registros e relatórios. Estudos distintos exigem agrupamento humano. Busca limitada a até 200 registros por execução; total_found não é contagem de registros importados.",
+    "complete": true
+  },
+  "jobs": [
+    {
+      "kind": "pubmed",
+      "status": "done"
+    },
+    {
+      "kind": "pdf",
+      "status": "done"
+    }
+  ]
+}

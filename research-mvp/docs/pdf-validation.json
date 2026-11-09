@@ -1,0 +1,332 @@
+{
+  "status": "available",
+  "sha256": "cfff2d704d665197f828b1dc4855d31c094b9a5afecfc9a74cb89482a61ce134",
+  "license": "cc by",
+  "license_evidence": {
+    "id": "42987252",
+    "source": "MED",
+    "pmid": "42987252",
+    "pmcid": "PMC13739208",
+    "fullTextIdList": {
+      "fullTextId": [
+        "PMC13739208"
+      ]
+    },
+    "doi": "10.2196/102920",
+    "title": "Effectiveness of Smartphone-Based Versus Community-Based Otago Exercise Programs for Fall Risk Reduction in Community-Dwelling Older Adults: Protocol for a Randomized Controlled Trial.",
+    "authorString": "Silsupadol P, Lugade V, Bair WN, Grier K.",
+    "authorList": {
+      "author": [
+        {
+          "fullName": "Silsupadol P",
+          "lastName": "Silsupadol",
+          "firstName": "Patima",
+          "initials": "P",
+          "authorId": {
+            "type": "ORCID",
+            "value": "0000-0001-9195-7614"
+          },
+          "authorAffiliationDetailsList": {
+            "authorAffiliation": [
+              {
+                "affiliation": "Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, 48 H. Stenger Place, Johnson City, NY, 13790, United States, 1 6077774846."
+              }
+            ]
+          }
+        },
+        {
+          "fullName": "Lugade V",
+          "lastName": "Lugade",
+          "firstName": "Vipul",
+          "initials": "V",
+          "authorId": {
+            "type": "ORCID",
+            "value": "0000-0001-7226-6260"
+          },
+          "authorAffiliationDetailsList": {
+            "authorAffiliation": [
+              {
+                "affiliation": "Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, 48 H. Stenger Place, Johnson City, NY, 13790, United States, 1 6077774846."
+              },
+              {
+                "affiliation": "Motion Analysis Research Laboratory, Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, Binghamton, NY, United States."
+              }
+            ]
+          }
+        },
+        {
+          "fullName": "Bair WN",
+          "lastName": "Bair",
+          "firstName": "Woei-Nan",
+          "initials": "WN",
+          "authorId": {
+            "type": "ORCID",
+            "value": "0000-0003-3517-3123"
+          },
+          "authorAffiliationDetailsList": {
+            "authorAffiliation": [
+              {
+                "affiliation": "Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, 48 H. Stenger Place, Johnson City, NY, 13790, United States, 1 6077774846."
+              }
+            ]
+          }
+        },
+        {
+          "fullName": "Grier K",
+          "lastName": "Grier",
+          "firstName": "Kelly",
+          "initials": "K",
+          "authorId": {
+            "type": "ORCID",
+            "value": "0009-0008-5312-4695"
+          },
+          "authorAffiliationDetailsList": {
+            "authorAffiliation": [
+              {
+                "affiliation": "Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, 48 H. Stenger Place, Johnson City, NY, 13790, United States, 1 6077774846."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "authorIdList": {
+      "authorId": [
+        {
+          "type": "ORCID",
+          "value": "0000-0001-7226-6260"
+        },
+        {
+          "type": "ORCID",
+          "value": "0000-0001-9195-7614"
+        },
+        {
+          "type": "ORCID",
+          "value": "0000-0003-3517-3123"
+        },
+        {
+          "type": "ORCID",
+          "value": "0009-0008-5312-4695"
+        }
+      ]
+    },
+    "dataLinksTagsList": {
+      "dataLinkstag": [
+        "supporting_data"
+      ]
+    },
+    "journalInfo": {
+      "volume": "15",
+      "journalIssueId": 4304106,
+      "dateOfPublication": "2026 Nov",
+      "monthOfPublication": 11,
+      "yearOfPublication": 2026,
+      "journal": {
+        "medlineAbbreviation": "JMIR Res Protoc",
+        "title": "JMIR research protocols",
+        "essn": "1929-0748",
+        "issn": "1929-0748",
+        "isoabbreviation": "JMIR Res Protoc",
+        "nlmid": "101599504"
+      },
+      "printPublicationDate": "2026-11-01"
+    },
+    "pubYear": "2026",
+    "pageInfo": "e102920",
+    "abstractText": "<h4>Background</h4>The Otago Exercise Program (OEP), traditionally delivered at home by a physical therapist, is an evidence-based intervention proven to reduce falls and fall-related injuries in older adults. Despite its effectiveness, widespread adoption has been limited by the personnel and resource demands required for program delivery. Exploring alternative delivery methods, including remote platforms and community-based programs, may help overcome implementation barriers and expand access to this program.<h4>Objective</h4>This study aims to evaluate (1) the effectiveness of 2 delivery modes of the OEP, a remotely delivered, smartphone-based program, and an in-person, community-based program, and (2) participant experiences, feasibility, and acceptability across both delivery formats.<h4>Methods</h4>Thirty-six adults aged 55 years or older, classified as being at intermediate or high risk for falls according to the World Falls Guidelines, will be enrolled in this study. Eligible participants will be randomly assigned to one of two intervention groups: (1) a remotely delivered, smartphone-based OEP, or (2) an in-person, community-based OEP. Participants in the community-based group will attend sessions at a senior center, whereas those in the smartphone-based group will complete the program at home via the Improve (Vipul Lugade) smartphone app. Both groups will receive individualized 60-minute training sessions twice a week for 8 weeks, delivered by certified trainers under the supervision of physical therapists. The 16-session program will include progressive balance, mobility, and strengthening exercises consistent with the OEP. The primary outcome is self-selected gait speed. Secondary outcomes include injurious falls, fall risk assessed using the Physiological Profile Assessment, Timed Up and Go, 30-Second Chair Stand, 4-Stage Balance Test, and 4-Square Step Test, as well as measures of feasibility, acceptability, usability, and health-related quality of life. Outcomes will be assessed at baseline and postintervention by investigators blinded to group allocation. In addition, gait speed will be assessed weekly throughout the 8-week intervention using the Improve app to monitor changes over time. Trainers will be blinded to outcome data, including baseline and interim assessment results.<h4>Results</h4>The study received funding in February 2026, and enrollment began in the same month. As of May 2026, 16 participants have been enrolled. Data collection is expected to be completed in December 2026, with findings anticipated for dissemination by the middle of 2027.<h4>Conclusions</h4>This is the first study to use a smartphone to deliver OEP and to directly compare remote- and community-based delivery platforms. Findings may support broader adoption and implementation of this evidence-based fall prevention program by reducing participation barriers and expanding access for older adults, particularly in remote and underserved areas.",
+    "affiliation": "Division of Physical Therapy, Decker College of Nursing and Health Sciences, Binghamton University, 48 H. Stenger Place, Johnson City, NY, 13790, United States, 1 6077774846.",
+    "publicationStatus": "epublish",
+    "language": "eng",
+    "pubModel": "Electronic",
+    "pubTypeList": {
+      "pubType": [
+        "research-article",
+        "Journal Article"
+      ]
+    },
+    "meshHeadingList": {
+      "meshHeading": [
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Humans"
+        },
+        {
+          "majorTopic_YN": "Y",
+          "descriptorName": "Exercise Therapy",
+          "meshQualifierList": {
+            "meshQualifier": [
+              {
+                "majorTopic_YN": "N",
+                "abbreviation": "MT",
+                "qualifierName": "methods"
+              },
+              {
+                "majorTopic_YN": "N",
+                "abbreviation": "ST",
+                "qualifierName": "standards"
+              }
+            ]
+          }
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Risk Reduction Behavior"
+        },
+        {
+          "majorTopic_YN": "Y",
+          "descriptorName": "Accidental Falls",
+          "meshQualifierList": {
+            "meshQualifier": [
+              {
+                "majorTopic_YN": "N",
+                "abbreviation": "PC",
+                "qualifierName": "prevention & control"
+              }
+            ]
+          }
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Aged"
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Middle Aged"
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Female"
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Male"
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Randomized Controlled Trials as Topic"
+        },
+        {
+          "majorTopic_YN": "N",
+          "descriptorName": "Independent Living",
+          "meshQualifierList": {
+            "meshQualifier": [
+              {
+                "majorTopic_YN": "N",
+                "abbreviation": "SN",
+                "qualifierName": "statistics & numerical data"
+              }
+            ]
+          }
+        },
+        {
+          "majorTopic_YN": "Y",
+          "descriptorName": "Smartphone"
+        }
+      ]
+    },
+    "keywordList": {
+      "keyword": [
+        "Mobile phone",
+        "Fall Prevention",
+        "Older Adults",
+        "Community-based Program",
+        "Digital Health",
+        "Otago Exercise Program",
+        "Smartphone-based Intervention"
+      ]
+    },
+    "subsetList": {
+      "subset": [
+        {
+          "code": "IM",
+          "name": "Index Medicus"
+        }
+      ]
+    },
+    "fullTextUrlList": {
+      "fullTextUrl": [
+        {
+          "availability": "Subscription required",
+          "availabilityCode": "S",
+          "documentStyle": "doi",
+          "site": "DOI",
+          "url": "https://doi.org/10.2196/102920"
+        },
+        {
+          "availability": "Open access",
+          "availabilityCode": "OA",
+          "documentStyle": "html",
+          "site": "Europe_PMC",
+          "url": "https://europepmc.org/articles/PMC13739208"
+        },
+        {
+          "availability": "Open access",
+          "availabilityCode": "OA",
+          "documentStyle": "pdf",
+          "site": "Europe_PMC",
+          "url": "https://europepmc.org/articles/PMC13739208?pdf=render"
+        }
+      ]
+    },
+    "isOpenAccess": "Y",
+    "inEPMC": "Y",
+    "inPMC": "Y",
+    "citedByCount": 0,
+    "hasReferences": "Y",
+    "hasTextMinedTerms": "Y",
+    "hasDbCrossReferences": "N",
+    "hasPDF": "Y",
+    "hasBook": "N",
+    "hasSuppl": "Y",
+    "hasLabsLinks": "N",
+    "hasData": "Y",
+    "license": "cc by",
+    "authMan": "N",
+    "epmcAuthMan": "N",
+    "nihAuthMan": "N",
+    "hasTMAccessionNumbers": "Y",
+    "tmAccessionTypeList": {
+      "accessionType": [
+        "nct",
+        "doi"
+      ]
+    },
+    "dateOfCompletion": "2026-11-05",
+    "dateOfCreation": "2026-11-05",
+    "dateOfRevision": "2026-11-07",
+    "electronicPublicationDate": "2026-11-05",
+    "firstPublicationDate": "2026-11-05",
+    "firstIndexDate": "2026-11-07",
+    "fullTextReceivedDate": "2026-11-07",
+    "hasEvaluations": "N"
+  },
+  "pmc_cloud_metadata": {
+    "pmcid": "PMC13739208",
+    "version": 1,
+    "pmid": 42987252,
+    "doi": "10.2196/102920",
+    "mid": null,
+    "title": "Effectiveness of Smartphone-Based Versus Community-Based Otago Exercise Programs for Fall Risk Reduction in Community-Dwelling Older Adults: Protocol for a Randomized Controlled Trial",
+    "citation": "JMIR Res Protoc. 2026 Nov 5;15:e102920. doi: 10.2196/102920",
+    "is_pmc_openaccess": true,
+    "is_manuscript": false,
+    "is_historical_ocr": false,
+    "is_retracted": false,
+    "license_code": "CC BY",
+    "text_url": "s3://pmc-oa-opendata/PMC13739208.1/PMC13739208.1.txt?md5=def54d68c61f92fa7fb7373485eb3d20",
+    "pdf_url": "s3://pmc-oa-opendata/PMC13739208.1/PMC13739208.1.pdf?md5=5da3b99648afd3fde8119a049f91d099",
+    "xml_url": "s3://pmc-oa-opendata/PMC13739208.1/PMC13739208.1.xml?md5=8650eba82bff4b933941dcb424157874",
+    "media_urls": [
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-g001.webp?md5=56bce9ccd90a37bf43164829f2e9028e",
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-g002.webp?md5=dbab48c713271dc8274cc84e948e5517",
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-g003.webp?md5=64094de0f690903f44d545bb6b5a5c00",
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-g004.webp?md5=e3b74fa0db2a5f86c9e27aba6456ad41",
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-g005.webp?md5=35dabe45d9fdd05ddab8716bc2dd8a71",
+      "s3://pmc-oa-opendata/PMC13739208.1/resprot-v15-e102920-s001.docx?md5=b96697f1b1954fa06e770ee200ec898d"
+    ]
+  },
+  "metadata_source": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID%3A42987252+AND+SRC%3AMED&format=json&resultType=core",
+  "source_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13739208.1/PMC13739208.1.pdf?md5=5da3b99648afd3fde8119a049f91d099",
+  "retrieved_at": 1794253374.590687,
+  "pages": 18
+}

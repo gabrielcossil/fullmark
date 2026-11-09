@@ -1,0 +1,19 @@
+{
+  "engine": "PostgreSQL via PGlite; auth/storage fixture schemas, not live Supabase",
+  "migration": "20261109192559_fullmark_research.sql",
+  "passed": [
+    "owner-scoped reviews",
+    "owner-scoped articles",
+    "owner-scoped audit",
+    "private storage owner paths",
+    "client writes denied",
+    "cross-user article read denied",
+    "cross-user audit read denied",
+    "anonymous reads denied",
+    "audit immutable",
+    "protocol immutable",
+    "owner immutable",
+    "all app tables RLS",
+    "storage bucket private"
+  ]
+}

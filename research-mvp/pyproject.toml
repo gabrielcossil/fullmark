@@ -1,0 +1,17 @@
+[project]
+name = "fullmark-research"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+ "fastapi==0.162.2", "uvicorn==0.54.0", "sqlalchemy==2.1.8",
+ "psycopg[binary]==3.3.8", "httpx==0.28.1", "pydantic-settings==2.16.2", "pypdf==7.0.0"
+]
+[dependency-groups]
+dev = ["pytest==9.2.0", "respx==0.23.1", "ruff==0.17.4"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+[tool.ruff]
+line-length = 140
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

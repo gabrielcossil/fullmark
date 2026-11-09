@@ -1,0 +1,31 @@
+{
+  "mode": "local-demo; automated test actor, not actual scientific approvals",
+  "review_id": "ecb949a7-f4e9-4c26-8340-5bb416a0d7f7",
+  "records": 3,
+  "articles": 3,
+  "jobs": [
+    {
+      "kind": "pubmed",
+      "status": "done"
+    }
+  ],
+  "prisma": {
+    "identified": 3,
+    "duplicates_removed": 0,
+    "screened": 0,
+    "title_abstract_excluded": 0,
+    "title_abstract_pending": 3,
+    "reports_sought": 0,
+    "reports_not_retrieved": 0,
+    "reports_retrieval_pending": 0,
+    "reports_available": 0,
+    "reports_assessed": 0,
+    "full_text_excluded": 0,
+    "full_text_pending": 0,
+    "included_reports": 0,
+    "full_text_exclusion_reasons": {},
+    "study_count": null,
+    "note": "Contagens de registros e relatórios. Estudos distintos exigem agrupamento humano. Busca limitada a até 200 registros por execução; total_found não é contagem de registros importados.",
+    "complete": false
+  }
+}
