@@ -50,7 +50,12 @@ def user(authorization: Annotated[str | None, Header()] = None):
             r = c.get(s.supabase_url + "/auth/v1/user", headers={"apikey": s.supabase_publishable_key, "Authorization": authorization})
         if r.status_code != 200:
             raise HTTPException(401, "Sessão inválida")
-        return r.json()["id"]
+        identity = r.json()
+        if s.allowed_emails.strip():
+            allowed = {email.strip().casefold() for email in s.allowed_emails.split(",") if email.strip()}
+            if identity.get("email", "").casefold() not in allowed or not identity.get("email_confirmed_at"):
+                raise HTTPException(403, "Esta conta não está autorizada no painel Fullmark")
+        return identity["id"]
     except (httpx.HTTPError, KeyError):
         raise HTTPException(503, "Autenticação indisponível")
 
@@ -345,8 +350,6 @@ def profile(actor: User, authorization: Annotated[str | None, Header()] = None):
     if r.status_code != 200 or r.json().get("id") != actor:
         raise HTTPException(401, "Sessão inválida")
     return {"id": actor, "email": r.json().get("email", "")}
-
-
 
 
 @app.post("/auth/password")

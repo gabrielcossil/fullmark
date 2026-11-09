@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     storage_proxy_url: str = ""
     storage_proxy_token: str = ""
     internal_token: str = ""
+    allowed_emails: str = ""
     browser_use_api_key: str = ""
     browser_network_policy_id: str = ""
     browser_model: str = "gpt-6-luna"
@@ -28,6 +29,8 @@ def settings():
     if s.environment == "production":
         if s.demo_mode or not s.database_url.startswith("postgresql+psycopg://"):
             raise RuntimeError("Production requires PostgreSQL and demo_mode=false")
+        if not s.allowed_emails.strip():
+            raise RuntimeError("Production requires an explicit reviewer email allowlist")
         if not all(
             (
                 s.supabase_url,

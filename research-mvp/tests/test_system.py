@@ -428,3 +428,27 @@ def test_invited_user_sets_only_own_password(client, monkeypatch):
     assert route.calls.last.request.headers["Authorization"] == "Bearer invite-session-test"
     assert json.loads(route.calls.last.request.content) == {"password": "new-test-password-12345"}
     assert client.post("/auth/password", json={"password": "new-test-password-12345"}).status_code == 401
+
+
+@respx.mock
+def test_verified_email_allowlist_blocks_other_valid_accounts(client, monkeypatch):
+    monkeypatch.setattr(settings(), "demo_mode", False)
+    monkeypatch.setattr(settings(), "supabase_url", "https://project.supabase.co")
+    monkeypatch.setattr(settings(), "supabase_publishable_key", "public-test")
+    monkeypatch.setattr(settings(), "allowed_emails", "reviewer@example.test")
+    route = respx.get("https://project.supabase.co/auth/v1/user")
+    h = {"Authorization": "Bearer valid-but-not-authorized-user"}
+    route.mock(
+        return_value=httpx.Response(
+            200, json={"id": "other", "email": "outside@example.test", "email_confirmed_at": "2026-11-09T00:00:00Z"}
+        )
+    )
+    assert client.get("/reviews", headers=h).status_code == 403
+    route.mock(return_value=httpx.Response(200, json={"id": "reviewer", "email": "reviewer@example.test", "email_confirmed_at": None}))
+    assert client.get("/reviews", headers=h).status_code == 403
+    route.mock(
+        return_value=httpx.Response(
+            200, json={"id": "reviewer", "email": "reviewer@example.test", "email_confirmed_at": "2026-11-09T00:00:00Z"}
+        )
+    )
+    assert client.get("/reviews", headers=h).status_code == 200
