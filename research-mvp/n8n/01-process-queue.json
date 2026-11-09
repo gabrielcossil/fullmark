@@ -2,14 +2,6 @@
   "name": "Fullmark · Processar fila",
   "nodes": [
     {
-      "id": "b378c828-196c-4adf-a632-152271ed7aec",
-      "name": "A cada minuto",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.3,
-      "position": [
-        0,
-        0
-      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -19,17 +11,17 @@
             }
           ]
         }
-      }
+      },
+      "id": "b378c828-196c-4adf-a632-152271ed7aec",
+      "name": "A cada minuto",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        -192
+      ]
     },
     {
-      "id": "e2794eb5-e301-40f0-ac98-1645ba625805",
-      "name": "Processar uma tarefa",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        300,
-        0
-      ],
       "parameters": {
         "method": "POST",
         "url": "https://fullmark-research-api.onrender.com/internal/tick",
@@ -38,23 +30,39 @@
         "options": {
           "timeout": 210000
         }
+      },
+      "id": "e2794eb5-e301-40f0-ac98-1645ba625805",
+      "name": "Processar uma tarefa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        304,
+        -192
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
       }
     },
     {
+      "parameters": {
+        "content": "## Fullmark / Fila persistente\nConfigurar URL da API e credencial Fullmark Internal. Header: X-Internal-Token. Copiar o valor de INTERNAL_TOKEN do gerenciador de segredos da hospedagem. Não guardar o token nos parâmetros.\nPublicar somente após /health/ready responder 200. Aprovações humanas ficam no painel da pesquisa, nunca neste agendamento.",
+        "height": 200,
+        "width": 600,
+        "color": 4
+      },
       "id": "cd387662-ac2f-45bf-856b-7fe786df4859",
       "name": "Sticky Note 545f4fb0",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -50,
-        -50
-      ],
-      "parameters": {
-        "content": "## Fullmark / Fila persistente\nConfigurar URL da API e credencial Fullmark Internal. Header: X-Internal-Token. Copiar o valor de INTERNAL_TOKEN do gerenciador de segredos da hospedagem. Não guardar o token nos parâmetros.\nPublicar somente após /health/ready responder 200. Aprovações humanas ficam no painel da pesquisa, nunca neste agendamento.",
-        "color": 4,
-        "width": 600,
-        "height": 200
-      }
+        -48,
+        -48
+      ]
     }
   ],
   "connections": {
@@ -76,7 +84,8 @@
     "timezone": "America/Bahia",
     "saveDataErrorExecution": "all",
     "saveDataSuccessExecution": "none",
-    "executionTimeout": 240
+    "executionTimeout": 240,
+    "binaryMode": "separate"
   },
   "active": false
 }

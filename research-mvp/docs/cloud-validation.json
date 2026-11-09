@@ -10,14 +10,19 @@
     "bucket": "fullmark-private",
     "bucket_public": false,
     "live_transactional_rls_checks": "passed; fixtures rolled back",
-    "security_advisories": []
+    "security_advisories": [
+      "auth_leaked_password_protection WARN: disabled"
+    ],
+    "runtime_role": "fullmark_runtime (no superuser, no BYPASSRLS)",
+    "storage_bridge": "fullmark-storage (custom SHA256 token authentication)",
+    "runtime_connection": "verified session pooler SSL"
   },
   "n8n": {
     "project": "Aptus Digital <aptusworkspace@gmail.com>",
     "project_type": "personal",
     "process_workflow": "0SPEW7DFBBXjQRHe",
     "monitor_workflow": "nbIthVaFfpyofVKt",
-    "published": false,
+    "published": true,
     "simulated_tests": [
       {
         "execution": "13823",
@@ -34,6 +39,12 @@
         "expected": "error",
         "observed": "error"
       }
+    ],
+    "live_tests": [
+      "13840",
+      "13841",
+      "13865",
+      "13867"
     ]
   },
   "render": {
@@ -42,12 +53,26 @@
     "url": "https://fullmark-research-api.onrender.com",
     "initial_deploy": "dep-dbp2a2rl550s73c4c4g0",
     "initial_deploy_status": "live",
-    "live_health_status": "setup_pending",
-    "readiness_http": 503,
-    "production_research_ready": false
+    "live_health_status": "ready",
+    "readiness_http": 200,
+    "production_research_ready": true,
+    "runtime_env": "database_url and storage bridge configured automatically",
+    "latest_app_commit": "f24a5f52a9b9ad64a78847560c8e1960d90f41c5",
+    "latest_live_deploy": "dep-dbp35mrbc2fs7390bveg"
   },
   "python_tests": {
-    "passed": 30,
+    "passed": 33,
     "warnings": 1
+  },
+  "cloud_integration": {
+    "fixture": "technical QA; no scientific human approval",
+    "review_id": "216ed73f-c35c-4af2-9521-baa48bd4f2c1",
+    "pubmed": "done",
+    "browser": "done; recommendation validated",
+    "browser_run": "7f5661c8-db1e-492f-ba51-aa83e638aefb",
+    "pdf": "available; 18 pages; CC BY",
+    "pdf_sha256": "cfff2d704d665197f828b1dc4855d31c094b9a5afecfc9a74cb89482a61ce134",
+    "invite_sent_verified": true,
+    "first_user_login_verified": false
   }
 }

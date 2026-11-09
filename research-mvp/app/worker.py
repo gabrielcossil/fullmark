@@ -138,6 +138,8 @@ def tick():
             return False
         old_status = job.status
         old_lease = job.lease_until
+        # PostgreSQL already holds the row lock; poolers may round float outputs.
+        # Keep lease CAS only for SQLite, where SELECT FOR UPDATE is unavailable.
         claimed = db.execute(
             update(Job)
             .where(Job.id == job.id, Job.status == old_status,

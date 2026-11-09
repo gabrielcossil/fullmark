@@ -2,7 +2,7 @@
 
 ## 1. Supabase Fullmark
 
-Destino informado: `https://blgzcajmjuivaxyblgdi.supabase.co`. A conexão Fullmark já está autorizada, e as duas migrações desta entrega foram aplicadas e verificadas nesse projeto. A chave publicável não concede acesso administrativo. Não aplique os arquivos no projeto Aptus Clin.
+Destino informado: `https://blgzcajmjuivaxyblgdi.supabase.co`. A conexão Fullmark já está autorizada, e as três migrações desta entrega foram aplicadas e verificadas nesse projeto. A chave publicável não concede acesso administrativo. Não aplique os arquivos no projeto Aptus Clin.
 
 O procedimento usado nesta sessão foi: inspecionar tabelas, aplicar migração, verificar RLS/storage e consultar advisories. Não enviar senhas, connection strings, secret keys ou tokens pelo chat.
 
@@ -12,7 +12,7 @@ Se configurar diretamente:
 2. No painel **Connect**, obtenha a conexão Postgres. Para um serviço sem IPv6, use o session pooler. Configure no gerenciador de segredos da hospedagem `DATABASE_URL=postgresql+psycopg://...?...sslmode=require` com a sintaxe de query correta (se já houver `?`, acrescente `&sslmode=require`). Escape caracteres especiais da senha no URL. Não salve a senha em Git.
 3. Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` e a chave **secret** do servidor (`SUPABASE_SECRET_KEY`) no painel da hospedagem. A publicável serve para Auth; a secret é usada somente no backend para Storage.
 4. Com `DATABASE_URL` definido no ambiente seguro, execute `python -m scripts.migrate` a partir da raiz. O executor mantém histórico próprio `fm_schema_migrations`, checksums e lock. Não combine com `supabase db push` sem baselining do histórico: escolha um único executor.
-5. Confirme sete tabelas de aplicação `fm_*`, mais `fm_schema_migrations`,, RLS ativo, políticas SELECT por proprietário, ausência de grants de escrita para `anon`/`authenticated`, bucket `fullmark-private` com `public=false`.
+5. Confirme sete tabelas de aplicação `fm_*`, mais `fm_schema_migrations`, RLS ativo, políticas SELECT por proprietário, ausência de grants de escrita para `anon`/`authenticated`, bucket `fullmark-private` com `public=false`.
 6. Em **Authentication > Users**, crie/convide revisores, que entrarão com email/senha Supabase no painel. Desabilite cadastro público nas configurações do Supabase Auth; a interface não oferece signup, mas isso sozinho não desabilita a API de signup. Configure SMTP e confirmação de email conforme a política da Fullmark.
 7. Configure backups e retenção adequados ao plano. Teste restauração antes de uso institucional. Não há exclusão de pesquisas pela aplicação neste MVP.
 
@@ -26,7 +26,7 @@ Crie uma política de rede com allowlist para `pubmed.ncbi.nlm.nih.gov`, `pmc.nc
 
 O adaptador usa `POST https://api.browser-use.com/api/v4/runs`, `X-Browser-Use-API-Key`, `outputSchema`, polling em `GET /runs/{id}/status` e leitura final de `GET /runs/{id}`. Modelo configurável; padrão atual `gpt-6-luna`. Sem email, compras, credenciais de navegação ou perfil pessoal. `agentmail=false`.
 
-O teto configurado de US$25 por sessão cobre as categorias descritas pelo fornecedor, não representa um limite global garantido de toda cobrança (navegador/rede e serviços podem ter cobrança própria). Reduza `BROWSER_MAX_COST_USD` se desejar, e limite também o saldo e as permissões no fornecedor. As execuções só são solicitadas pelo revisor.
+O teto configurado nesta implantação é US$0,50 por sessão e cobre as categorias descritas pelo fornecedor, não representa um limite global garantido de toda cobrança (navegador/rede e serviços podem ter cobrança própria). Reduza `BROWSER_MAX_COST_USD` se desejar, e limite também o saldo e as permissões no fornecedor. As execuções só são solicitadas pelo revisor.
 
 ## 3. Fonte Git e Render
 
@@ -44,9 +44,9 @@ O `render.yaml` não cria banco Render: Supabase continua sendo o banco de aplic
 
 ## 4. n8n existente
 
-Endereço informado: `https://n8n-n8n.og3bg4.easypanel.host/mcp-server/http`. A conexão autenticada n8n está disponível e permitiu criar os dois rascunhos. Ele é um endereço MCP, não a API REST de administração de workflows.
+Endereço informado: `https://n8n-n8n.og3bg4.easypanel.host/mcp-server/http`. A conexão autenticada n8n está disponível e permitiu criar e ativar os dois workflows. Ele é um endereço MCP, não a API REST de administração de workflows.
 
-Nesta instância, o MCP oferece SDK, criação, atualização, validação e testes. Os workflows já foram criados por essa conexão. Não os importe de novo: abra os links em STATUS.md e configure as credenciais pendentes. As orientações de importação abaixo servem para restaurar em outra instância.
+Nesta instância, o MCP oferece SDK, criação, atualização, validação e testes. Os workflows já foram criados por essa conexão. Não os importe de novo: abra os links em STATUS.md; as credenciais desta implantação já estão configuradas. As orientações de importação abaixo servem para restaurar em outra instância.
 
 Importação manual quando necessário:
 
@@ -74,9 +74,7 @@ Sucesso de uma chamada HTTP não é evidência de importação no n8n. Verifique
 
 ## Instalação desta sessão
 
-O código já está no GitHub em `gabrielcossil/fullmark`, branch `fullmark-research-mvp`, pasta `research-mvp`. Serviço Render: https://fullmark-research-api.onrender.com. O deploy inicial está live, mas fechado em modo de configuração, aguardando DATABASE_URL e SUPABASE_SECRET_KEY. SUPABASE_URL, chave publicável, INTERNAL_TOKEN aleatório, ENVIRONMENT, DEMO_MODE e NCBI_EMAIL já foram definidos. Configure também Browser Use para liberar pesquisa web. Depois salve e reimplante; auto-deploy está desligado. A API somente fica pronta quando `/health/ready` retorna 200.
-
-Nos workflows já criados, o URL correto foi preenchido. Crie uma credencial `Fullmark Internal` no editor n8n e vincule aos dois nós HTTP. O conector permite listar e vincular credenciais, mas não inserir seus valores secretos. Não é necessário reenviar arquivos ou criar os workflows novamente.
+O código está no GitHub em `gabrielcossil/fullmark`, branch `fullmark-research-mvp`, pasta `research-mvp`. API pronta em https://fullmark-research-api.onrender.com; `/health/ready` retorna 200. Segredos configurados diretamente nos serviços, workflows n8n ativos, convite enviado para redacao@fullmark.com.br. Auto-deploy desligado. Configure `ALLOWED_EMAILS` com os emails confirmados autorizados antes de cada nova instalação.
 
 ## Alternativa usada: configuração sem senha administrativa
 
@@ -84,4 +82,4 @@ Nesta implantação, `DATABASE_URL` usa o papel restrito `fullmark_runtime` cria
 
 `STORAGE_PROXY_URL` e `STORAGE_PROXY_TOKEN` substituem `SUPABASE_SECRET_KEY` no Render. A função `fullmark-storage` usa seu próprio `SUPABASE_SERVICE_ROLE_KEY` fornecido pelo ambiente Supabase e nunca o retorna. Antes de implantar uma cópia da função, substitua `CONFIGURE_AT_DEPLOYMENT` pelo SHA256 hexadecimal de um token forte novo; o token em texto fica apenas no ambiente de servidor. Nesta sessão isso já foi feito automaticamente. Para rotação, atualize o hash da função e o segredo Render juntos. A função usa autenticação própria, por isso o gateway JWT está desabilitado; sem o token correto retorna 401.
 
-A conta Browser Use e a credencial n8n ainda dependem de sessão autenticada do usuário nos respectivos painéis. Não envie senhas nem chaves nesta conversa.
+A conta Browser Use e a credencial n8n foram configuradas e testadas. Para restaurar em outra instalação, gere novos segredos diretamente nos painéis; não envie senhas ou chaves pelo chat.

@@ -38,6 +38,14 @@
         "options": {
           "timeout": 70000
         }
+      },
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Fullmark Internal"
+        }
       }
     },
     {

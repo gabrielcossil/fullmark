@@ -12,6 +12,10 @@ services:
         value: production
       - key: DEMO_MODE
         value: "false"
+      - key: ALLOWED_EMAILS
+        sync: false
+      - key: BROWSER_MAX_COST_USD
+        value: "0.50"
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL
