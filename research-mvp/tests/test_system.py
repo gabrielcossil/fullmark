@@ -187,7 +187,7 @@ def test_browser_fabricated_quote_rejected(review, article, monkeypatch):
             "sources": [],
         }
     )
-    monkeypatch.setattr(browser, "poll", lambda run: (output, {"model": "test"}))
+    monkeypatch.setattr(browser, "poll", lambda run, **kw: (output, {"model": "test"}))
     with db.Session() as s:
         j = db.enqueue(s, review, "browser", "browser-quote", {"article_ids": [article]})
         j.external_id = "run-quote"
@@ -195,8 +195,11 @@ def test_browser_fabricated_quote_rejected(review, article, monkeypatch):
         s.commit()
     worker.tick()
     with db.Session() as s:
-        assert not s.get(db.Article, article).recommendation
-        assert s.get(db.Job, jid).attempts == 1
+        rec = s.get(db.Article, article).recommendation
+        assert rec["recommendation"] == "uncertain" and rec["quote"] == ""
+        assert rec["evidence_status"] == "manual_review_required"
+        assert s.get(db.Job, jid).status == "done_with_warnings"
+        assert s.get(db.Job, jid).attempts == 0
 
 
 def test_browser_success_is_only_recommendation(client, auth, review, article, monkeypatch):
@@ -208,7 +211,7 @@ def test_browser_success_is_only_recommendation(client, auth, review, article, m
             "sources": ["https://pubmed.ncbi.nlm.nih.gov/1/"],
         }
     )
-    monkeypatch.setattr(browser, "poll", lambda run: (output, {"model": "test"}))
+    monkeypatch.setattr(browser, "poll", lambda run, **kw: (output, {"model": "test"}))
     with db.Session() as s:
         j = db.enqueue(s, review, "browser", "browser-valid", {"article_ids": [article]})
         j.external_id = "run-valid"

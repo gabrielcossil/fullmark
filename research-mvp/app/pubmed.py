@@ -1,9 +1,19 @@
-import time, re, hashlib
+import time, re, hashlib, threading
 import xml.etree.ElementTree as ET
 import httpx
 from .config import settings
 
 BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+_rate_lock = threading.Lock()
+_next_request = 0.0
+
+
+def request(client, method, *args, **kwargs):
+    global _next_request
+    with _rate_lock:
+        time.sleep(max(0, _next_request - time.monotonic()))
+        _next_request = time.monotonic() + 0.36
+    return getattr(client, method)(*args, **kwargs)
 
 
 def text(node):
@@ -54,8 +64,11 @@ def search(query, limit, progress=None, sort="pub date"):
     if s.ncbi_api_key:
         params["api_key"] = s.ncbi_api_key
     with httpx.Client(timeout=45) as c:
-        r = c.get(
-            BASE + "esearch.fcgi", params={**params, "term": query, "retmode": "json", "retmax": limit, "sort": sort, "usehistory": "y"}
+        r = request(
+            c,
+            "get",
+            BASE + "esearch.fcgi",
+            params={**params, "term": query, "retmode": "json", "retmax": limit, "sort": sort, "usehistory": "y"},
         )
         r.raise_for_status()
         raw = r.json()
@@ -68,7 +81,7 @@ def search(query, limit, progress=None, sort="pub date"):
         records = []
         for i in range(0, len(ids), 25):
             time.sleep(0.35)
-            r = c.post(BASE + "efetch.fcgi", data={**params, "id": ",".join(ids[i : i + 25]), "retmode": "xml"})
+            r = request(c, "post", BASE + "efetch.fcgi", data={**params, "id": ",".join(ids[i : i + 25]), "retmode": "xml"})
             r.raise_for_status()
             records.extend(parse(r.text))
             if progress:
@@ -83,7 +96,9 @@ def verify_mesh(term):
     if not re.fullmatch(r"[A-Za-z0-9 ,()'\-/]{2,180}", term):
         return {"term": term, "verified": False, "reason": "Invalid heading format"}
     with httpx.Client(timeout=25) as c:
-        r = c.get(
+        r = request(
+            c,
+            "get",
             BASE + "esearch.fcgi",
             params={
                 "db": "mesh",
@@ -100,7 +115,7 @@ def verify_mesh(term):
         if not ids:
             return {"term": term, "verified": False, "reason": "Not found in MeSH"}
         time.sleep(0.35)
-        r = c.get(BASE + "esummary.fcgi", params={"db": "mesh", "id": ids[0], "retmode": "json"})
+        r = request(c, "get", BASE + "esummary.fcgi", params={"db": "mesh", "id": ids[0], "retmode": "json"})
         r.raise_for_status()
         data = r.json()["result"][ids[0]]
     heading = data.get("ds_meshterms", [])

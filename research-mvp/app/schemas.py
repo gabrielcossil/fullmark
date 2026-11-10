@@ -40,10 +40,11 @@ class Finding(BaseModel):
     recommendation: Literal["include", "exclude", "uncertain"]
     reason: str = Field(min_length=1, max_length=3000)
     quote: str = Field(max_length=2000)
+    priority: int = Field(default=50, ge=0, le=100)
 
 
 class BrowserOutput(BaseModel):
-    findings: list[Finding] = Field(max_length=200)
+    findings: list[Finding] = Field(max_length=2000)
     sources: list[str] = Field(default_factory=list, max_length=40)
 
 
@@ -102,3 +103,7 @@ class IntakeCreate(BaseModel):
     production_text: str = Field(default="", max_length=20000)
     attachments: list[IntakeAttachment] = Field(default_factory=list, max_length=20)
     max_records: int = Field(default=50, ge=1, le=200)
+
+
+class SelectionTarget(BaseModel):
+    target: int = Field(ge=1, le=200)

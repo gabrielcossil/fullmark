@@ -115,7 +115,10 @@ def prisma(db, rid):
     counts["complete"] = not any(
         counts[k] for k in ("title_abstract_pending", "reports_retrieval_pending", "full_text_pending")
     ) and not db.scalar(
-        select(Job.id).where(Job.review_id == rid, Job.status.in_(["pending", "running", "failed", "needs_reconciliation"]))
+        select(Job.id).where(
+            Job.review_id == rid,
+            Job.status.in_(["pending", "running", "failed", "needs_reconciliation", "cancel_requested", "cancelling", "cancel_unknown"]),
+        )
     )
     return counts
 
@@ -128,7 +131,7 @@ def snapshot(db, r):
                 row["payload"] = {k: v for k, v in row["payload"].items() if k != "snapshot"}
         return result
 
-    return {
+    data = {
         "review": {c.name: getattr(r, c.name) for c in Review.__table__.columns},
         "prisma": prisma(db, r.id),
         "articles": rows(Article),
@@ -139,3 +142,26 @@ def snapshot(db, r):
         "jobs": rows(Job),
         "exported_at": now(),
     }
+    target = None
+    for a in sorted(data["audit"], key=lambda a: a["created_at"]):
+        if a["action"] == "selection_target_set":
+            target = a["payload"].get("target")
+    latest = decisions(db, r.id)
+    eligible = sorted(
+        [
+            a
+            for a in data["articles"]
+            if a["recommendation"].get("recommendation") == "include"
+            and a["recommendation"].get("quote")
+            and not ((a["id"], "title_abstract") in latest and latest[(a["id"], "title_abstract")].verdict == "exclude")
+        ],
+        key=lambda a: (-a["recommendation"].get("priority", 50), a["id"]),
+    )
+    data["selection_summary"] = {
+        "target": target,
+        "eligible": len(eligible),
+        "manual_review": sum(a["recommendation"].get("evidence_status") == "manual_review_required" for a in data["articles"]),
+        "shortfall": max(0, target - len(eligible)) if target else None,
+        "suggested_ids": [a["id"] for a in eligible[:target] if target],
+    }
+    return data

@@ -1,4 +1,4 @@
-import io, json, secrets
+import io, json, secrets, asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select, text, func
 from .config import settings
 from .db import Base, engine, Session, Review, Search, Article, Audit, Job, audit, enqueue, now
-from .schemas import ReviewCreate, SearchCreate, DecisionCreate, ExtractionCreate, PasswordSet, BulkDecision, IntakeCreate
+from .schemas import ReviewCreate, SearchCreate, DecisionCreate, ExtractionCreate, PasswordSet, BulkDecision, IntakeCreate, SelectionTarget
 from .service import digest, owned, article_for, decide, snapshot, prisma
 from . import files, exports
 from .research import Filters, build_query
@@ -18,10 +18,22 @@ from .research import Filters, build_query
 async def lifespan(app):
     if settings().environment != "production":
         Base.metadata.create_all(engine)
-    yield
+    stop = asyncio.Event()
+    runner = None
+    if settings().environment == "production" and settings().worker_enabled:
+        from .worker import dispatch
+
+        runner = asyncio.create_task(dispatch(stop))
+    app.state.dispatcher = runner
+    try:
+        yield
+    finally:
+        stop.set()
+        if runner:
+            await runner
 
 
-app = FastAPI(title="Fullmark Research", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Fullmark Research", version="0.3.0", lifespan=lifespan)
 
 
 def session():
@@ -103,7 +115,13 @@ def public_config():
 
 @app.get("/health/live")
 def live():
-    return {"status": "ok", "version": "0.2.0"}
+    return {
+        "status": "ok",
+        "version": "0.3.0",
+        "dispatcher_running": bool(getattr(app.state, "dispatcher", None) and not app.state.dispatcher.done()),
+        "worker_concurrency": 2,
+        "provider_concurrency": 2,
+    }
 
 
 @app.get("/health/ready")
@@ -595,3 +613,87 @@ def intake(body: IntakeCreate, db: DB):
     enqueue(db, r.id, "planning", "intake-" + body.task_id, {})
     audit(db, r.id, "clickup", "intake_received", {"task_id": body.task_id, "needs_human_protocol_approval": True})
     return {"review_id": r.id, "created": True, "next": "Planejamento na fila. A pesquisa só começa após aprovação do protocolo."}
+
+
+@app.get("/reviews/{rid}/jobs/{jid}/logs")
+def job_logs(rid: str, jid: str, db: DB, actor: User, refresh_provider: bool = False):
+    from .job_control import public_logs
+    from . import browser
+
+    owned(db, rid, actor)
+    j = db.get(Job, jid)
+    if not j or j.review_id != rid:
+        raise HTTPException(404)
+    data = public_logs(db, j)
+    if refresh_provider and j.external_id and j.kind in ("browser", "planning"):
+        try:
+            data["remote"] = browser.inspect(j.external_id)
+            data["remote_checked_at"] = now()
+            audit(
+                db,
+                rid,
+                actor,
+                "job_event",
+                {
+                    "job_id": jid,
+                    "event": "operator_verified",
+                    "message": "Estado consultado diretamente no Browser Use",
+                    "provider_status": data["remote"]["status"],
+                },
+            )
+        except httpx.HTTPError:
+            data["remote_error"] = "Não foi possível consultar o provedor agora. Nenhuma execução nova foi iniciada."
+    return data
+
+
+@app.post("/reviews/{rid}/jobs/{jid}/cancel", status_code=202)
+def cancel_job(rid: str, jid: str, db: DB, actor: User):
+    from . import browser
+    from .job_control import event
+
+    owned(db, rid, actor)
+    j = db.scalar(select(Job).where(Job.id == jid, Job.review_id == rid).with_for_update())
+    if not j:
+        raise HTTPException(404)
+    if j.status in ("done", "done_with_warnings"):
+        raise HTTPException(409, "A análise já foi concluída. Os resultados e o histórico foram preservados.")
+    if j.kind not in ("browser", "planning", "pubmed", "pdf"):
+        raise HTTPException(409, "Entregas externas precisam de conferência antes de interrupção.")
+    if j.status == "cancelled":
+        return {"status": j.status}
+    remote_id = j.external_id
+    ambiguous = j.payload.get("submission_started") and not remote_id
+    immediate = not remote_id and not ambiguous
+    j.status = "cancelled" if immediate else "cancel_requested"
+    j.error = ""
+    j.payload = {**j.payload, "cancel_requested_at": now(), "cancel_requested_by": actor, "last_activity_at": now()}
+    j.available_at = now()
+    audit(db, rid, actor, "job_cancel_requested", {"job_id": jid, "remote_stop_needed": bool(remote_id)})
+    if immediate:
+        event(db, j, "cancelled", "Cancelado localmente; buscas e artigos anteriores preservados")
+    db.commit()
+    if remote_id:
+        try:
+            state = browser.cancel(remote_id)
+            db.expire_all()
+            j = db.scalar(select(Job).where(Job.id == jid).with_for_update())
+            j.status = "cancelled"
+            j.error = ""
+            j.payload = {**j.payload, "provider_status": state.get("status"), "provider_checked_at": now(), "last_activity_at": now()}
+            event(
+                db, j, "cancelled", "Cancelamento confirmado no provedor; dados anteriores preservados", provider_status=state.get("status")
+            )
+        except httpx.HTTPError:
+            db.rollback()
+            return {
+                "status": "cancel_requested",
+                "message": "Cancelamento local solicitado. A confirmação remota será repetida automaticamente.",
+            }
+    return {"status": j.status, "message": "Cancelamento registrado. Custos já consumidos e resultados anteriores não são apagados."}
+
+
+@app.post("/reviews/{rid}/selection-target")
+def selection_target(rid: str, body: SelectionTarget, db: DB, actor: User):
+    owned(db, rid, actor, True)
+    audit(db, rid, actor, "selection_target_set", {"target": body.target})
+    return {"target": body.target}

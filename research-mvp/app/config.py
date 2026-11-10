@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     ncbi_api_key: str = ""
     local_storage: str = "./data"
     demo_mode: bool = False
+    worker_enabled: bool = True
+    worker_concurrency: int = 2
 
 
 @lru_cache
