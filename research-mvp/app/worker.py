@@ -92,7 +92,7 @@ def reserve_provider(db, job):
         .select_from(Job)
         .where(
             Job.id != job.id,
-            Job.kind.in_(["browser", "planning"]),
+            Job.kind.in_(["browser", "planning", "writing"]),
             Job.status.in_(["pending", "running", "cancel_requested", "cancelling", "needs_reconciliation", "cancel_unknown"]),
             Job.payload["submission_started"].as_boolean() == True,
         )
@@ -246,6 +246,45 @@ def handle(db, job):
         if db.bind.dialect.name == "postgresql" and not db.scalar(text("select pg_try_advisory_xact_lock(73941025)")):
             raise Later(10)
         ingest(db, job)
+    elif job.kind == "writing":
+        if not job.external_id:
+            if job.payload.get("submission_started"):
+                job.status = "needs_reconciliation"
+                return
+            reserve_provider(db, job)
+            job.payload = {**job.payload, "submission_started": True, "submitted_at": now()}
+            event(db, job, "provider_submit", "Preparando resposta editorial com os artigos aceitos")
+            checkpoint(db, job, lock=True)
+            db.commit()
+            job.external_id = browser.submit(job.payload["context"], [], writing=True)
+            db.commit()
+            raise Later(5)
+        result = browser.poll(job.external_id, writing=True, observer=lambda raw: poll_events(db, job, raw))
+        if result is None:
+            if now() - job.payload.get("submitted_at", job.created_at) > 1800:
+                raise ValueError("Tempo limite da assistência editorial; confira a execução antes de repetir")
+            raise Later(5)
+        output, raw = result
+        import re
+
+        allowed = {str(a.get("pmid")) for a in job.payload["context"]["sources"]}
+        cited = set(re.findall(r"\[PMID:\s*(\d+)\]", output.content))
+        if cited - allowed:
+            raise InvalidProviderResult("Resposta citou PMID fora das fontes aceitas; proposta não aplicada")
+        checkpoint(db, job, lock=True)
+        job.payload = {**job.payload, "result": output.model_dump(), "cost_usd": raw.get("totalCostUsd")}
+        audit(
+            db,
+            job.review_id,
+            "assistant",
+            "writing_proposed",
+            {
+                "job_id": job.id,
+                "mode": job.payload["mode"],
+                "proposal": output.model_dump(),
+                "base_revision": job.payload["context"]["revision"],
+            },
+        )
     elif job.kind == "planning":
         if not job.external_id:
             if job.payload.get("submission_started"):
@@ -362,7 +401,7 @@ def tick():
                         )
                     db.commit()
                     return True
-                if job.external_id and job.kind in ("browser", "planning"):
+                if job.external_id and job.kind in ("browser", "planning", "writing"):
                     state = browser.cancel(job.external_id)
                     poll_events(db, job, state)
                 job.status = "cancelled"
@@ -403,7 +442,7 @@ def tick():
                 return True
             job.attempts += 1
             job.error = type(exc).__name__
-            ambiguous = job.kind in ("browser", "planning") and job.payload.get("submission_started") and not job.external_id
+            ambiguous = job.kind in ("browser", "planning", "writing") and job.payload.get("submission_started") and not job.external_id
             deterministic = isinstance(exc, (InvalidProviderResult, __import__("pydantic").ValidationError)) or (
                 isinstance(exc, ValueError) and job.external_id
             )

@@ -1,3 +1,7 @@
+# Atualização · Fumark Studio 0.4
+
+Login e dashboard simplificados, atividades concentradas no Histórico, próximos passos explícitos, editor de prévia com versões, comentários, assistência IA e Word. [Detalhes e limites](STUDIO-V4.md).
+
 # Atualização · Controle de análises 0.3
 
 Fila contínua com até dois workers e duas execuções remotas; validação isolada por artigo; cancelamento com confirmação; histórico consultável e meta de pré-seleção. [Detalhes e limites](JOBS-V3.md). 55 testes passaram. Abaixo seguem evidências históricas das versões anteriores.

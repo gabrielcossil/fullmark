@@ -33,7 +33,7 @@ async def lifespan(app):
             await runner
 
 
-app = FastAPI(title="Fullmark Research", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Fullmark Research", version="0.4.0", lifespan=lifespan)
 
 
 def session():
@@ -117,7 +117,7 @@ def public_config():
 def live():
     return {
         "status": "ok",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "dispatcher_running": bool(getattr(app.state, "dispatcher", None) and not app.state.dispatcher.done()),
         "worker_concurrency": 2,
         "provider_concurrency": 2,
@@ -376,7 +376,7 @@ def retry_job(rid: str, jid: str, db: DB, actor: User):
         raise HTTPException(404)
     if j.status != "failed":
         raise HTTPException(409, "Somente tarefas com falha podem ser reenviadas")
-    if j.kind in ("browser", "planning") and not j.external_id:
+    if j.kind in ("browser", "planning", "writing") and not j.external_id:
         raise HTTPException(409, "Reconcilie a execução no Browser Use primeiro")
     j.status = "pending"
     j.attempts = 0
@@ -395,7 +395,7 @@ def reconcile_job(rid: str, jid: str, body: dict, db: DB, actor: User):
     j = db.get(Job, jid)
     if not j or j.review_id != rid:
         raise HTTPException(404)
-    if j.kind not in ("browser", "planning") or j.status != "needs_reconciliation":
+    if j.kind not in ("browser", "planning", "writing") or j.status != "needs_reconciliation":
         raise HTTPException(409, "Esta tarefa não precisa de reconciliação")
     try:
         run_id = str(UUID(body["run_id"]))
@@ -625,7 +625,7 @@ def job_logs(rid: str, jid: str, db: DB, actor: User, refresh_provider: bool = F
     if not j or j.review_id != rid:
         raise HTTPException(404)
     data = public_logs(db, j)
-    if refresh_provider and j.external_id and j.kind in ("browser", "planning"):
+    if refresh_provider and j.external_id and j.kind in ("browser", "planning", "writing"):
         try:
             data["remote"] = browser.inspect(j.external_id)
             data["remote_checked_at"] = now()
@@ -657,7 +657,7 @@ def cancel_job(rid: str, jid: str, db: DB, actor: User):
         raise HTTPException(404)
     if j.status in ("done", "done_with_warnings"):
         raise HTTPException(409, "A análise já foi concluída. Os resultados e o histórico foram preservados.")
-    if j.kind not in ("browser", "planning", "pubmed", "pdf"):
+    if j.kind not in ("browser", "planning", "writing", "pubmed", "pdf"):
         raise HTTPException(409, "Entregas externas precisam de conferência antes de interrupção.")
     if j.status == "cancelled":
         return {"status": j.status}
@@ -697,3 +697,112 @@ def selection_target(rid: str, body: SelectionTarget, db: DB, actor: User):
     owned(db, rid, actor, True)
     audit(db, rid, actor, "selection_target_set", {"target": body.target})
     return {"target": body.target}
+
+
+from . import writing
+
+
+@app.get("/reviews/{rid}/writing")
+def writing_state(rid: str, db: DB, actor: User):
+    return writing.state(db, owned(db, rid, actor))
+
+
+@app.put("/reviews/{rid}/writing")
+def writing_save(rid: str, body: writing.DraftSave, db: DB, actor: User):
+    return writing.save(db, owned(db, rid, actor, True), actor, body)
+
+
+@app.post("/reviews/{rid}/writing/comments")
+def writing_comment(rid: str, body: writing.CommentCreate, db: DB, actor: User):
+    r = owned(db, rid, actor, True)
+    audit(db, rid, actor, "draft_comment", body.model_dump())
+    db.flush()
+    return writing.state(db, r)
+
+
+@app.post("/reviews/{rid}/writing/comments/{cid}/resolve")
+def resolve_comment(rid: str, cid: str, db: DB, actor: User):
+    r = owned(db, rid, actor, True)
+    comment = db.get(Audit, cid)
+    if not comment or comment.review_id != rid or comment.action != "draft_comment":
+        raise HTTPException(404, "Comentário não encontrado")
+    audit(db, rid, actor, "draft_comment_resolved", {"comment_id": cid})
+    db.flush()
+    return writing.state(db, r)
+
+
+@app.post("/reviews/{rid}/writing/assist", status_code=202)
+def writing_assist(rid: str, body: writing.WritingRequest, db: DB, actor: User):
+    r = owned(db, rid, actor, True)
+    if not settings().browser_use_api_key or not settings().browser_network_policy_id:
+        raise HTTPException(503, "Assistente de IA não configurado")
+    return writing.request(db, r, actor, body)
+
+
+@app.get("/reviews/{rid}/writing/docx")
+def writing_export(rid: str, db: DB, actor: User):
+    data = writing.state(db, owned(db, rid, actor))
+    if not data["draft"].get("content"):
+        raise HTTPException(409, "Escreva ou gere a prévia antes de exportar")
+    return Response(
+        writing.docx(data),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": 'attachment; filename="previa-inicial.docx"'},
+    )
+
+
+@app.post("/reviews/{rid}/prepare-delivery")
+def prepare_delivery(rid: str, db: DB, actor: User):
+    return writing.prepare(db, owned(db, rid, actor, True), actor)
+
+
+@app.post("/reviews/{rid}/articles/{aid}/pdf")
+async def upload_article_pdf(rid: str, aid: str, request: Request, db: DB, actor: User):
+    import hashlib
+    from pypdf import PdfReader
+
+    r = owned(db, rid, actor, True)
+    a = article_for(db, rid, aid)
+    from .service import decisions
+
+    ta = decisions(db, rid).get((aid, "title_abstract"))
+    if not ta or ta.verdict != "include":
+        raise HTTPException(409, "Aceite o artigo na triagem antes de anexar o PDF")
+    if a.pdf.get("status") == "available":
+        raise HTTPException(409, "Este artigo já possui um PDF disponível")
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > 20 * 1024 * 1024:
+            raise HTTPException(413, "O PDF deve ter até 20 MB")
+    if not data.startswith(b"%PDF-"):
+        raise HTTPException(422, "Envie um PDF válido")
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if reader.is_encrypted or not 1 <= len(reader.pages) <= 1000:
+            raise ValueError()
+        pages = [p.extract_text() or "" for p in reader.pages]
+    except Exception:
+        raise HTTPException(422, "PDF ilegível, protegido ou fora do limite de páginas")
+    digest = hashlib.sha256(data).hexdigest()
+    path = files.put(f"{r.owner_id}/{rid}/pdf/{aid}/{digest}.pdf", bytes(data), "application/pdf")
+    text_path = files.put(f"{r.owner_id}/{rid}/text/{aid}/{digest}.json", json.dumps(pages).encode(), "application/json")
+    a.pdf = {
+        "status": "available",
+        "path": path,
+        "text_path": text_path,
+        "sha256": digest,
+        "pages": len(pages),
+        "license": "user_authorized_copy",
+        "source": "user_upload",
+        "identity_verification": "user_confirmed",
+        "retrieved_at": now(),
+    }
+    audit(
+        db,
+        rid,
+        actor,
+        "article_pdf_uploaded",
+        {"article_id": aid, "sha256": digest, "pages": len(pages), "identity_confirmed_by_user": True},
+    )
+    return {"status": "available", "pages": len(pages)}
