@@ -1,3 +1,7 @@
+# Atualização · Controle de análises 0.3
+
+Fila contínua com até dois workers e duas execuções remotas; validação isolada por artigo; cancelamento com confirmação; histórico consultável e meta de pré-seleção. [Detalhes e limites](JOBS-V3.md). 55 testes passaram. Abaixo seguem evidências históricas das versões anteriores.
+
 # Atualização · Research Studio 0.2
 
 Novo layout, fichas, filtros, descritores, progresso, revisão e entrega ao Drive estão publicados. Quatro workflows n8n ativos. [Guia, evidências e limites atuais](WORKSPACE-V2.md). Validação atual: 45 testes. O relato abaixo preserva as evidências da implantação inicial.
