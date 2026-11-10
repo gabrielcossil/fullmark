@@ -268,7 +268,7 @@ def handle(db, job):
         import re
 
         allowed = {str(a.get("pmid")) for a in job.payload["context"]["sources"]}
-        cited = set(re.findall(r"\[PMID:\s*(\d+)\]", output.content))
+        cited = set(re.findall(r"PMID:\s*(\d+)", output.content))
         if cited - allowed:
             raise InvalidProviderResult("Resposta citou PMID fora das fontes aceitas; proposta não aplicada")
         checkpoint(db, job, lock=True)

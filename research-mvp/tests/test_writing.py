@@ -85,7 +85,7 @@ def test_writing_proposal_never_overwrites_document(client, auth, review, monkey
         s.commit()
         assert j.payload["result"]["content"].startswith("# Introdução")
         assert writing.state(s, s.get(db.Review, review))["draft"]["content"] == "Texto humano"
-    monkeypatch.setattr(browser, "poll", lambda *a, **k: (writing.WritingOutput(content="Inventado [PMID: 999]."), {}))
+    monkeypatch.setattr(browser, "poll", lambda *a, **k: (writing.WritingOutput(content="Inventado (PMID: 999)."), {}))
     with db.Session() as s:
         import pytest
 
