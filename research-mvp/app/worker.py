@@ -285,6 +285,20 @@ def handle(db, job):
                 "base_revision": job.payload["context"]["revision"],
             },
         )
+        if job.payload["mode"] != "question":
+            audit(
+                db,
+                job.review_id,
+                "assistant",
+                "draft_workflow",
+                {
+                    "draft_id": job.payload.get("draft_id", ""),
+                    "status": "ready_for_review",
+                    "revision": job.payload["context"]["revision"],
+                    "at": now(),
+                    "note": "Proposta gerada; aguarda revisão humana",
+                },
+            )
     elif job.kind == "planning":
         if not job.external_id:
             if job.payload.get("submission_started"):

@@ -1,0 +1,13 @@
+import {Plugin} from '@tiptap/pm/state';
+import {Decoration,DecorationSet} from '@tiptap/pm/view';
+import {Editor, Mark, Extension, mergeAttributes} from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import {TextStyleKit} from '@tiptap/extension-text-style';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+import {TableKit} from '@tiptap/extension-table';
+import Superscript from '@tiptap/extension-superscript';
+import Subscript from '@tiptap/extension-subscript';
+const CommentAnchor=Mark.create({name:'commentAnchor',addAttributes(){return {id:{default:null}}},parseHTML(){return [{tag:'span[data-comment]'}]},renderHTML({HTMLAttributes}){return ['span',mergeAttributes({'data-comment':HTMLAttributes.id,class:'comment-anchor'},HTMLAttributes),0]}});
+const SourceLinks=Extension.create({name:'sourceLinks',addProseMirrorPlugins(){return [new Plugin({props:{decorations(state){let links=[];state.doc.descendants((node,pos)=>{if(node.isText){for(const m of node.text.matchAll(/PMID:\s*(\d+)/gi))links.push(Decoration.inline(pos+m.index,pos+m.index+m[0].length,{class:'inline-source','data-pmid':m[1],title:'Abrir artigo utilizado',role:'button'}));}});return DecorationSet.create(state.doc,links);},handleClick(view,pos,event){const id=event.target.closest('[data-pmid]')?.dataset.pmid;if(id){window.dispatchEvent(new CustomEvent('studio-source',{detail:id}));return true;}return false;}}})];}});
+window.createStudioEditor=(element,onUpdate,onSelect)=>new Editor({element,extensions:[SourceLinks,StarterKit.configure({link:{openOnClick:false,protocols:['https','http']}}),TextStyleKit,Highlight.configure({multicolor:true}),TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true}}),Superscript,Subscript,CommentAnchor],content:'<p></p>',onUpdate:({editor})=>onUpdate(editor),onSelectionUpdate:({editor})=>{const {from,to}=editor.state.selection;onSelect(editor.state.doc.textBetween(from,to,' '),from,to);}});

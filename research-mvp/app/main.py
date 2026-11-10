@@ -33,7 +33,7 @@ async def lifespan(app):
             await runner
 
 
-app = FastAPI(title="Fullmark Research", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Fullmark Research", version="0.5.0", lifespan=lifespan)
 
 
 def session():
@@ -88,7 +88,7 @@ async def security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; font-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+        "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self'; img-src 'self' blob:; font-src 'self'; frame-ancestors 'none'; base-uri 'none'"
     )
     return response
 
@@ -100,7 +100,7 @@ def home():
 
 @app.get("/static/{name}")
 def asset(name: str):
-    if name not in ("app.js", "style.css", "montserrat.woff2"):
+    if name not in ("app.js", "style.css", "montserrat.woff2", "editor.js"):
         raise HTTPException(404)
     return Response(
         Path(__file__).with_name("static").joinpath(name).read_bytes(),
@@ -117,7 +117,7 @@ def public_config():
 def live():
     return {
         "status": "ok",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "dispatcher_running": bool(getattr(app.state, "dispatcher", None) and not app.state.dispatcher.done()),
         "worker_concurrency": 2,
         "provider_concurrency": 2,
@@ -703,45 +703,46 @@ from . import writing
 
 
 @app.get("/reviews/{rid}/writing")
-def writing_state(rid: str, db: DB, actor: User):
-    return writing.state(db, owned(db, rid, actor))
+def writing_state(rid: str, db: DB, actor: User, draft_id: str = ""):
+    return writing.state(db, owned(db, rid, actor), draft_id)
 
 
 @app.put("/reviews/{rid}/writing")
-def writing_save(rid: str, body: writing.DraftSave, db: DB, actor: User):
-    return writing.save(db, owned(db, rid, actor, True), actor, body)
+def writing_save(rid: str, body: writing.DraftSave, db: DB, actor: User, draft_id: str = ""):
+    return writing.save(db, owned(db, rid, actor, True), actor, body, draft_id)
 
 
 @app.post("/reviews/{rid}/writing/comments")
-def writing_comment(rid: str, body: writing.CommentCreate, db: DB, actor: User):
+def writing_comment(rid: str, body: writing.CommentCreate, db: DB, actor: User, draft_id: str = ""):
     r = owned(db, rid, actor, True)
-    audit(db, rid, actor, "draft_comment", body.model_dump())
+    writing.ensure_project(db, r, draft_id)
+    audit(db, rid, actor, "draft_comment", {**body.model_dump(), "draft_id": draft_id})
     db.flush()
-    return writing.state(db, r)
+    return writing.state(db, r, draft_id)
 
 
 @app.post("/reviews/{rid}/writing/comments/{cid}/resolve")
-def resolve_comment(rid: str, cid: str, db: DB, actor: User):
+def resolve_comment(rid: str, cid: str, db: DB, actor: User, draft_id: str = ""):
     r = owned(db, rid, actor, True)
     comment = db.get(Audit, cid)
-    if not comment or comment.review_id != rid or comment.action != "draft_comment":
+    if not comment or comment.review_id != rid or comment.action != "draft_comment" or comment.payload.get("draft_id", "") != draft_id:
         raise HTTPException(404, "Comentário não encontrado")
-    audit(db, rid, actor, "draft_comment_resolved", {"comment_id": cid})
+    audit(db, rid, actor, "draft_comment_resolved", {"comment_id": cid, "draft_id": draft_id})
     db.flush()
-    return writing.state(db, r)
+    return writing.state(db, r, draft_id)
 
 
 @app.post("/reviews/{rid}/writing/assist", status_code=202)
-def writing_assist(rid: str, body: writing.WritingRequest, db: DB, actor: User):
+def writing_assist(rid: str, body: writing.WritingRequest, db: DB, actor: User, draft_id: str = ""):
     r = owned(db, rid, actor, True)
     if not settings().browser_use_api_key or not settings().browser_network_policy_id:
         raise HTTPException(503, "Assistente de IA não configurado")
-    return writing.request(db, r, actor, body)
+    return writing.request(db, r, actor, body, draft_id)
 
 
 @app.get("/reviews/{rid}/writing/docx")
-def writing_export(rid: str, db: DB, actor: User):
-    data = writing.state(db, owned(db, rid, actor))
+def writing_export(rid: str, db: DB, actor: User, draft_id: str = ""):
+    data = writing.state(db, owned(db, rid, actor), draft_id)
     if not data["draft"].get("content"):
         raise HTTPException(409, "Escreva ou gere a prévia antes de exportar")
     return Response(
@@ -806,3 +807,150 @@ async def upload_article_pdf(rid: str, aid: str, request: Request, db: DB, actor
         {"article_id": aid, "sha256": digest, "pages": len(pages), "identity_confirmed_by_user": True},
     )
     return {"status": "available", "pages": len(pages)}
+
+
+@app.get("/writing-projects")
+def writing_projects(db: DB, actor: User):
+    result = []
+    for r in db.scalars(select(Review).where(Review.owner_id == actor)):
+        created = list(
+            db.scalars(select(Audit).where(Audit.review_id == r.id, Audit.action == "draft_project_created").order_by(Audit.created_at))
+        )
+        legacy = db.scalar(select(Audit.id).where(Audit.review_id == r.id, Audit.action.in_(["draft_saved", "writing_requested"])))
+        legacy = any(
+            not a.payload.get("draft_id")
+            for a in db.scalars(select(Audit).where(Audit.review_id == r.id, Audit.action.in_(["draft_saved", "writing_requested"])))
+        )
+        ids = ([("", r.title)] if legacy else []) + [(a.id, a.payload["title"]) for a in created]
+        for did, title in ids:
+            state = writing.state(db, r, did)
+            jobs = list(db.scalars(select(Job).where(Job.review_id == r.id, Job.kind == "writing").order_by(Job.created_at)))
+            jobs = [j for j in jobs if j.payload.get("draft_id", "") == did and j.payload.get("mode") != "question"]
+            last = jobs[-1] if jobs else None
+            status = state["workflow"]["status"]
+            if status == "draft" and last:
+                status = (
+                    "ready_for_review" if last.status == "done" else "generating" if last.status in ("pending", "running") else last.status
+                )
+            result.append(
+                {
+                    "review_id": r.id,
+                    "draft_id": did,
+                    "title": state["draft"].get("title") or title,
+                    "research_title": r.title,
+                    "client": state["draft"].get("client", ""),
+                    "status": status,
+                    "saved_at": state["saved_at"],
+                    "source_count": len(state["sources"]),
+                }
+            )
+    return sorted(result, key=lambda p: p["saved_at"] or 0, reverse=True)
+
+
+@app.post("/reviews/{rid}/writing-projects", status_code=201)
+def create_writing_project(rid: str, body: dict, db: DB, actor: User):
+    r = owned(db, rid, actor, True)
+    if not r.approved_at:
+        raise HTTPException(409, "Aprove o protocolo da pesquisa primeiro")
+    title = str(body.get("title", r.title)).strip()[:300]
+    if len(title) < 3:
+        raise HTTPException(422, "Informe um título")
+    event = Audit(review_id=rid, actor=actor, action="draft_project_created", payload={"title": title})
+    db.add(event)
+    db.flush()
+    writing.save(
+        db,
+        r,
+        actor,
+        writing.DraftSave(
+            title=title, theme=r.protocol.get("question", ""), production_text=r.protocol.get("source_document", {}).get("text", "")
+        ),
+        event.id,
+    )
+    return {"draft_id": event.id, "review_id": rid}
+
+
+@app.post("/reviews/{rid}/writing/workflow")
+def writing_workflow(rid: str, body: dict, db: DB, actor: User, draft_id: str = ""):
+    r = owned(db, rid, actor, True)
+    state = writing.state(db, r, draft_id)
+    status = body.get("status")
+    note = str(body.get("note", ""))[:4000]
+    if status not in ("ready_for_review", "changes_requested", "approved", "final_started"):
+        raise HTTPException(422, "Etapa inválida")
+    if status in ("ready_for_review", "approved", "final_started") and not state["draft"].get("content"):
+        raise HTTPException(409, "Salve o texto da prévia primeiro")
+    if status == "approved" and any(not c["resolved"] for c in state["comments"]):
+        raise HTTPException(409, "Resolva os comentários abertos antes de aprovar")
+    if status == "final_started" and state["workflow"]["status"] != "approved":
+        raise HTTPException(409, "Aprove a prévia antes de iniciar a versão final")
+    if state["workflow"]["status"] in ("approved", "final_started") and status not in ("changes_requested", "final_started"):
+        raise HTTPException(409, "Solicite ajustes para reabrir a prévia")
+    if status == "changes_requested" and not note.strip():
+        raise HTTPException(422, "Descreva os ajustes necessários")
+    active = db.scalar(select(Job.id).where(Job.review_id == rid, Job.kind == "writing", Job.status.in_(["pending", "running"])))
+    if status in ("approved", "final_started") and active:
+        raise HTTPException(409, "Aguarde a análise em andamento antes de aprovar")
+    audit(
+        db, rid, actor, "draft_workflow", {"draft_id": draft_id, "status": status, "note": note, "revision": state["revision"], "at": now()}
+    )
+    if status == "final_started":
+        audit(db, rid, actor, "final_version_started", {"draft_id": draft_id, "approved_revision": state["revision"]})
+    db.flush()
+    return writing.state(db, r, draft_id)
+
+
+@app.get("/notifications")
+def notifications(db: DB, actor: User):
+    rows = []
+    for r in db.scalars(select(Review).where(Review.owner_id == actor)):
+        read = {
+            a.payload.get("job_id") for a in db.scalars(select(Audit).where(Audit.review_id == r.id, Audit.action == "notification_read"))
+        }
+        for j in db.scalars(
+            select(Job)
+            .where(Job.review_id == r.id, Job.kind == "writing", Job.status.in_(["done", "failed", "needs_reconciliation"]))
+            .order_by(Job.created_at.desc())
+            .limit(30)
+        ):
+            rows.append(
+                {
+                    "id": j.id,
+                    "review_id": r.id,
+                    "draft_id": j.payload.get("draft_id", ""),
+                    "title": r.title,
+                    "message": "Prévia pronta para revisão humana"
+                    if j.status == "done" and j.payload.get("mode") != "question"
+                    else "Resposta da IA disponível"
+                    if j.status == "done"
+                    else "Assistência precisa de atenção",
+                    "read": j.id in read,
+                    "created_at": j.payload.get("last_activity_at", j.created_at),
+                }
+            )
+    return sorted(rows, key=lambda x: x["created_at"], reverse=True)[:50]
+
+
+@app.post("/reviews/{rid}/notifications/{jid}/read")
+def notification_read(rid: str, jid: str, db: DB, actor: User):
+    owned(db, rid, actor)
+    job = db.get(Job, jid)
+    if not job or job.review_id != rid:
+        raise HTTPException(404)
+    audit(db, rid, actor, "notification_read", {"job_id": jid})
+    return {"ok": True}
+
+
+@app.post("/reviews/{rid}/writing/template")
+async def writing_template(rid: str, request: Request, db: DB, actor: User, draft_id: str = ""):
+    owned(db, rid, actor)
+    writing.ensure_project(db, owned(db, rid, actor), draft_id)
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > 4 * 1024 * 1024:
+            raise HTTPException(413, "Modelo deve ter até 4 MB")
+    text = writing.validate_template(bytes(data))
+    import base64
+
+    return {"template_docx": base64.b64encode(data).decode(), "template_text": text}

@@ -126,6 +126,9 @@ def prisma(db, rid):
 def snapshot(db, r):
     def rows(cls):
         result = [{c.name: getattr(o, c.name) for c in cls.__table__.columns} for o in db.scalars(select(cls).where(cls.review_id == r.id))]
+        if cls is Audit:
+            for row in result:
+                row["payload"] = {k: v for k, v in row["payload"].items() if k != "template_docx"}
         if cls is Job:
             for row in result:
                 row["payload"] = {k: v for k, v in row["payload"].items() if k != "snapshot"}

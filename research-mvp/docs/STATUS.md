@@ -1,3 +1,7 @@
+# Atualização · Fumark Studio 0.5
+
+Biblioteca de prévias independentes, editor rico separado, identificação e formatação estruturadas, modelo DOCX pré-textual, vínculos clicáveis a artigos, notificações persistentes e aprovação antes de iniciar a versão final. [Detalhes e limites](STUDIO-V5.md).
+
 # Atualização · Fumark Studio 0.4
 
 Login e dashboard simplificados, atividades concentradas no Histórico, próximos passos explícitos, editor de prévia com versões, comentários, assistência IA e Word. [Detalhes e limites](STUDIO-V4.md).

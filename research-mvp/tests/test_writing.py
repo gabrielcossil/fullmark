@@ -110,3 +110,103 @@ def test_uploaded_pdf_requires_accepted_owned_article(client, auth, review, monk
     assert uploaded.status_code == 200
     assert len(stored) == 2
     assert client.post(f"/reviews/{review}/articles/{aid}/pdf", headers=auth, content=out.getvalue()).status_code == 409
+
+
+def test_independent_previews_workflow_and_approval(client, auth, review):
+    source(review)
+    created = [
+        client.post(f"/reviews/{review}/writing-projects", headers=auth, json={"title": f"Prévia independente {i}"}).json()["draft_id"]
+        for i in range(2)
+    ]
+    a = f"/reviews/{review}/writing?draft_id={created[0]}"
+    b = f"/reviews/{review}/writing?draft_id={created[1]}"
+    first = client.get(a, headers=auth).json()
+    data = {
+        "revision": first["revision"],
+        "title": "Primeira prévia",
+        "content": "Texto para revisar",
+        "layout": {"font": "Times New Roman", "size": 12, "top": 3, "bottom": 2, "left": 3, "right": 2, "pages": 10, "spacing": 1.5},
+        "identity": {"client_name": "Pessoa QA", "city": "Cidade QA"},
+    }
+    assert client.put(a, headers=auth, json=data).status_code == 200
+    assert client.get(b, headers=auth).json()["draft"]["content"] == ""
+    workflow = f"/reviews/{review}/writing/workflow?draft_id={created[0]}"
+    assert client.post(workflow, headers=auth, json={"status": "final_started"}).status_code == 409
+    comment = client.post(
+        f"/reviews/{review}/writing/comments?draft_id={created[0]}", headers=auth, json={"text": "Ajustar trecho", "anchor": "Texto"}
+    ).json()["comments"][0]
+    assert client.get(b, headers=auth).json()["comments"] == []
+    assert client.post(workflow, headers=auth, json={"status": "approved"}).status_code == 409
+    client.post(f"/reviews/{review}/writing/comments/{comment['id']}/resolve?draft_id={created[0]}", headers=auth)
+    assert client.post(workflow, headers=auth, json={"status": "approved"}).status_code == 200
+    updated = client.get(a, headers=auth).json()
+    data["revision"] = updated["revision"]
+    assert client.put(a, headers=auth, json=data).status_code == 409
+    assert client.post(workflow, headers=auth, json={"status": "final_started"}).status_code == 200
+    assert (
+        client.post(workflow, headers=auth, json={"status": "changes_requested", "note": "Reabrir para corrigir objetivos"}).status_code
+        == 200
+    )
+    assert client.put(a, headers=auth, json=data).status_code == 200
+
+
+def test_template_rich_word_and_layout(client, auth, review):
+    from docx import Document
+    import base64
+
+    template = Document()
+    template.add_paragraph("{{nome}}")
+    template.add_paragraph("{{titulo}}")
+    out = io.BytesIO()
+    template.save(out)
+    assert writing.validate_template(out.getvalue())
+    rich = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Trecho em negrito", "marks": [{"type": "bold"}, {"type": "highlight"}]}],
+            }
+        ],
+    }
+    body = {
+        "title": "Título formatado",
+        "content": "Trecho em negrito",
+        "rich": rich,
+        "identity": {"client_name": "Pessoa QA"},
+        "layout": {"left": 3, "right": 2, "top": 3, "bottom": 2, "font": "Arial", "size": 12, "spacing": 1.5, "pages": 5},
+        "template_docx": base64.b64encode(out.getvalue()).decode(),
+    }
+    assert client.put(f"/reviews/{review}/writing", headers=auth, json=body).status_code == 200
+    word = client.get(f"/reviews/{review}/writing/docx", headers=auth)
+    doc = Document(io.BytesIO(word.content))
+    assert doc.paragraphs[0].text == "Pessoa QA"
+    assert doc.paragraphs[1].text == "Título formatado"
+    assert any(r.bold for p in doc.paragraphs for r in p.runs)
+    assert abs(doc.sections[0].left_margin.cm - 3) < 0.01
+    body["revision"] = client.get(f"/reviews/{review}/writing", headers=auth).json()["revision"]
+    body["layout"]["left"] = 99
+    assert client.put(f"/reviews/{review}/writing", headers=auth, json=body).status_code == 422
+
+
+def test_project_owner_and_notifications(client, auth, review):
+    source(review)
+    project = client.post(f"/reviews/{review}/writing-projects", headers=auth, json={"title": "QA privada"}).json()["draft_id"]
+    with db.Session() as s:
+        j = db.Job(
+            review_id=review, kind="writing", request_key="notify-test", payload={"draft_id": project, "mode": "draft"}, status="done"
+        )
+        s.add(j)
+        s.commit()
+        jid = j.id
+    notifications = client.get("/notifications", headers=auth).json()
+    assert notifications[0]["draft_id"] == project and not notifications[0]["read"]
+    client.post(f"/reviews/{review}/notifications/{jid}/read", headers=auth)
+    assert client.get("/notifications", headers=auth).json()[0]["read"]
+    with db.Session() as s:
+        r = s.get(db.Review, review)
+        r.owner_id = "another"
+        s.commit()
+    assert client.get("/writing-projects", headers=auth).json() == []
+    assert client.get("/notifications", headers=auth).json() == []
+    assert client.get(f"/reviews/{review}/writing?draft_id={project}", headers=auth).status_code == 404

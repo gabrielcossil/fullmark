@@ -9,3 +9,5 @@
 *.db
 *.db-*
 data
+
+editor/node_modules
